@@ -1,24 +1,24 @@
 const TwitterPackage = require('twitter')
 const pg = require('pg')
 
-pg.defaults.ssl = true
-pg.connect(process.env.DATABASE_URL, function(err, client) {
-  if (err) throw err
-  console.log('Connected to postgres! Getting schemas...')
-
-  client
-    .query('SELECT table_schema,table_name FROM information_schema.tables;')
-    .on('row', function(row) {
-      console.log(JSON.stringify(row))
-    })
-})
+// pg.defaults.ssl = true
+// pg.connect(process.env.DATABASE_URL, function(err, client) {
+//   if (err) throw err
+//   console.log('Connected to postgres! Getting schemas...')
+//
+//   client
+//     .query('SELECT table_schema,table_name FROM information_schema.tables;')
+//     .on('row', function(row) {
+//       console.log(JSON.stringify(row))
+//     })
+// })
 
 // Initialize Twitter
 const twitterConfig = {
-  consumer_key: 'XXXXX',
-  consumer_secret: 'XXXXX',
-  access_token_key: 'XXXXX',
-  access_token_secret: 'XXXXX'
+  consumer_key: process.env.CONSUMER_KEY,
+  consumer_secret: process.env.CONSUMER_SECRET,
+  access_token_key: process.env.ACCESS_TOKEN_KEY,
+  access_token_secret: process.env.ACCESS_TOKEN_SECRET
 }
 const twitter = new TwitterPackage(twitterConfig)
 
@@ -38,10 +38,10 @@ twitter.get('statuses/mentions_timeline', {screen_name: 'mknepprath'}, function(
       replyQueue[i] = mentions[i].id_str
     }
     console.log(replyQueue)
-    // console.log(mentions[0].id_str)
-    // twitter.post('statuses/update', {status: '@mknepprath you got it', in_reply_to_status_id: mentions[0].id_str}, function(error, reply, response) {
-    //   if (!error) console.log(reply.text)
-    // })
+    console.log(mentions[0].id_str)
+    twitter.post('statuses/update', {status: '@mknepprath lets see', in_reply_to_status_id: mentions[0].id_str}, function(error, reply, response) {
+      if (!error) console.log(reply.text)
+    })
   }
 })
 
