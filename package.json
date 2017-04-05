@@ -5,7 +5,7 @@
   "author": "Michael Knepprath",
   "license": "MIT",
   "dependencies": {
-    "pg": "6.1.5",
+    "pg": "^6.1.5",
     "twitter": "^1.7.0"
   }
 }

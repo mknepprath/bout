@@ -20,6 +20,8 @@ node_modules
 
 .eslintcache
 
+.env
+
 *.xml
 
 *.iml
