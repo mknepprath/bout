@@ -1,10 +1,11 @@
 {
-  "name": "Duel",
+  "name": "Bout",
   "version": "1.0.0",
   "main": "app.js",
   "author": "Michael Knepprath",
   "license": "MIT",
   "dependencies": {
+    "cron": "^1.2.1",
     "pg": "^6.1.5",
     "twitter": "^1.7.0"
   }

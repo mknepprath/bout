@@ -34,8 +34,14 @@ const items = {
   rock: {
     move: 'throw',
     minDamage: 1,
-    maxDamage: 6,
+    maxDamage: 5,
     accuracy: 0.6
+  },
+  sword: {
+    move: 'slash',
+    minDamage: 2,
+    maxDamage: 6,
+    accuracy: 0.5
   }
 }
 const item_list = Object.keys(items)
@@ -195,7 +201,7 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
               for (let h in hashtags) {
                 console.log('Hashtag #' + h + ':', hashtags[h].text)
                 const {move, accuracy, minDamage: min, maxDamage: max} = items[player_data[current_id].item]
-                if (hashtags[h].text === move) {
+                if (hashtags[h].text.toLowerCase() === move) {
                   console.log(move + ' is a valid move!')
                   if (Math.random() <= accuracy) {
                     console.log('Attack hits!')
@@ -231,7 +237,7 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
                       break
                     } else {
                       // Compose tweet
-                      const reply_tweet = '@' + player_data[current_id].screen_name + ' Wow! @' + player_data[next_id].screen_name + ' took ' + damage + '. ' + next_bout_state.player_data[next_id].health + ' health remaining. Your move, @' + player_data[next_id].screen_name + '!'
+                      const reply_tweet = '@' + player_data[current_id].screen_name + ' Wow! @' + player_data[next_id].screen_name + ' took ' + damage + ' damage. ' + next_bout_state.player_data[next_id].health + ' health remaining. Your move, @' + player_data[next_id].screen_name + '!'
                       console.log('Reply:', reply_tweet)
 
                       // Post tweet
