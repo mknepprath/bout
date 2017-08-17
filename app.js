@@ -1,21 +1,46 @@
 const TwitterPackage = require('twitter')
 const pg = require('pg')
+const {
+  DATABASE_URL,
+  CONSUMER_KEY,
+  CONSUMER_SECRET,
+  ACCESS_TOKEN_KEY,
+  ACCESS_TOKEN_SECRET
+} = process.env
 
 // Connect to database
-const conString = process.env.DATABASE_URL + '?ssl=true'
+const conString = DATABASE_URL + '?ssl=true'
 const client = new pg.Client(conString)
 client.connect()
 
 // 'CREATE TABLE bouts (id SERIAL PRIMARY KEY, tweet_id VARCHAR(40) not null, current_id VARCHAR(40) not null, next_id VARCHAR(40) not null, player_data jsonb);'
 
+// heroku run worker --app boutbot
+
+// Vars
+// export DATABASE_URL=postgres://uuneqniuttwlga:09c9ea960d793cbc7fbb0612937c0e02004a792aab6c484304b8b01dad186ff7@ec2-54-163-234-140.compute-1.amazonaws.com:5432/da52r59q3ke190
+// export ACCESS_TOKEN_KEY=2578652522-ryLGPZC6Cy84TySAftw12s4xAjJG0of9Tto48ik
+// export ACCESS_TOKEN_SECRET=yL0K63v1dHMlsljat0z2jfv5em6K7i99QgC3sWLJtLInV
+// export CONSUMER_KEY=gBE32DFY3YNJJZfm21TjkYqOO
+// export CONSUMER_SECRET=9vBbsofTABalH1R1A42iLEQQiiU9a6r6dEuCMT55lE6xoG8QBi
+
+// To handle this error... "The local psql command could not be located."
+// PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"
+
+// From psql command line:
+// \dt => lists all tables
+// \q => quit psql
+// select * from bouts; => lists all bouts
+// :q => quit table view
+// drop table [table name] => deletes table
+
 // Initialize Twitter
-const twitterConfig = {
-  consumer_key: process.env.CONSUMER_KEY,
-  consumer_secret: process.env.CONSUMER_SECRET,
-  access_token_key: process.env.ACCESS_TOKEN_KEY,
-  access_token_secret: process.env.ACCESS_TOKEN_SECRET
-}
-const twitter = new TwitterPackage(twitterConfig)
+const twitter = new TwitterPackage({
+  consumer_key: CONSUMER_KEY,
+  consumer_secret: CONSUMER_SECRET,
+  access_token_key: ACCESS_TOKEN_KEY,
+  access_token_secret: ACCESS_TOKEN_SECRET
+})
 
 // Available items and moves
 const items = {
