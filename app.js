@@ -1,11 +1,15 @@
 const TwitterPackage = require('twitter')
 const pg = require('pg')
+const tweets = require('./tweets')
+const items = require('./items')
+const item_list = Object.keys(items)
+const bout_bot_id = '2578652522'
 const {
   DATABASE_URL,
-  CONSUMER_KEY,
-  CONSUMER_SECRET,
-  ACCESS_TOKEN_KEY,
-  ACCESS_TOKEN_SECRET
+  CONSUMER_KEY: consumer_key,
+  CONSUMER_SECRET: consumer_secret,
+  ACCESS_TOKEN_KEY: access_token_key,
+  ACCESS_TOKEN_SECRET: access_token_secret
 } = process.env
 
 // Connect to database
@@ -13,65 +17,13 @@ const conString = DATABASE_URL + '?ssl=true'
 const client = new pg.Client(conString)
 client.connect()
 
-// 'CREATE TABLE bouts (id SERIAL PRIMARY KEY, tweet_id VARCHAR(40) not null, current_id VARCHAR(40) not null, next_id VARCHAR(40) not null, player_data jsonb);'
-
-// heroku run worker --app boutbot
-
-// Vars
-// export DATABASE_URL=postgres://uuneqniuttwlga:09c9ea960d793cbc7fbb0612937c0e02004a792aab6c484304b8b01dad186ff7@ec2-54-163-234-140.compute-1.amazonaws.com:5432/da52r59q3ke190
-// export ACCESS_TOKEN_KEY=2578652522-ryLGPZC6Cy84TySAftw12s4xAjJG0of9Tto48ik
-// export ACCESS_TOKEN_SECRET=yL0K63v1dHMlsljat0z2jfv5em6K7i99QgC3sWLJtLInV
-// export CONSUMER_KEY=gBE32DFY3YNJJZfm21TjkYqOO
-// export CONSUMER_SECRET=9vBbsofTABalH1R1A42iLEQQiiU9a6r6dEuCMT55lE6xoG8QBi
-
-// To handle this error... "The local psql command could not be located."
-// PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"
-
-// From psql command line:
-// \dt => lists all tables
-// \q => quit psql
-// select * from bouts; => lists all bouts
-// :q => quit table view
-// drop table [table name] => deletes table
-
 // Initialize Twitter
 const twitter = new TwitterPackage({
-  consumer_key: CONSUMER_KEY,
-  consumer_secret: CONSUMER_SECRET,
-  access_token_key: ACCESS_TOKEN_KEY,
-  access_token_secret: ACCESS_TOKEN_SECRET
+  consumer_key,
+  consumer_secret,
+  access_token_key,
+  access_token_secret
 })
-
-// Available items and moves
-const items = {
-  fists: {
-    move: 'punch',
-    minDamage: 1,
-    maxDamage: 3,
-    accuracy: 1
-  },
-  stick: {
-    move: 'swing',
-    minDamage: 1,
-    maxDamage: 4,
-    accuracy: 0.8
-  },
-  rock: {
-    move: 'throw',
-    minDamage: 1,
-    maxDamage: 5,
-    accuracy: 0.6
-  },
-  sword: {
-    move: 'slash',
-    minDamage: 2,
-    maxDamage: 6,
-    accuracy: 0.5
-  }
-}
-const item_list = Object.keys(items)
-
-const bout_bot_id = '2578652522'
 
 // Get mentions of @bout_bot
 twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
@@ -94,20 +46,20 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
         // Get user_id, created_id for current mention (TODO: delete text, screen_name)
         const {id_str: tweet_id, text, created_at, user: {id_str: current_id, screen_name}, entities: {user_mentions}} = mentions[i]
 
-        // Calculate age of tweet
+        // Calculate age of tweet in days
         const created_date = new Date(created_at)
         const date = new Date()
         const age = Math.floor(((date - created_date) / 86400000))
         // If tweet is over 1 week old, stop queueing
         if (age > 7) break
 
-        console.log('Mention #' + i + ':', '@' + screen_name + ' - ' + text)
-        console.log('Mention age:', age + ' days')
+        console.log('Mention #' + i, '@' + screen_name + ' - ' + text)
+        console.log('Mention age', age + ' days')
 
         // Check if an opponent is mentioned
         if (user_mentions.length > 1) {
           const {id_str: next_id, screen_name: next_screen_name} = user_mentions[1]
-          console.log('Mentioned:', next_screen_name)
+          console.log('Mentioned', next_screen_name)
 
           // Get bout_id
           let bout_id
@@ -144,13 +96,13 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
         const {bout_id, mention} = queue[q]
         const {id_str: tweet_id, text, in_reply_to_user_id_str, user: {id_str: current_id, screen_name}, entities: {user_mentions}} = mention
         const bout = bouts.find(bout => bout.id === bout_id) // Bout data
-        console.log('#' + q + ':', '@' + screen_name + ' - ' + text)
+        console.log('#' + q, '@' + screen_name + ' - ' + text)
 
         // If tweet in reply to bout_bot
         if (in_reply_to_user_id_str === bout_bot_id) {
           const {id_str: next_id, screen_name: next_screen_name} = user_mentions[1]
 
-          console.log('Directed at:', '@' + next_screen_name)
+          console.log('Directed at', '@' + next_screen_name)
 
           if (bout === undefined) {
             // New bout
@@ -179,12 +131,7 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
 
               // INSERT INTO players
               client.query('INSERT INTO bouts (tweet_id, current_id, next_id, player_data) values ($1, $2, $3, $4)', [new_bout.tweet_id, new_bout.current_id, new_bout.next_id, new_bout.player_data], function(err, rows) {
-                if (!err) {
-                  console.log('Added bout to db')
-                  console.log('rows', rows)
-                } else {
-                  console.log('err', err)
-                }
+                console.log(err || 'Added bout to db')
               })
 
               // Compose tweet
@@ -216,10 +163,10 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
             const {id_str: tweet_id, entities: {hashtags}} = queue[q].mention
 
             let next_bout_state = {
-              tweet_id: tweet_id,
+              tweet_id,
               current_id: next_id,
               next_id: current_id,
-              player_data: player_data
+              player_data
             }
 
             if (hashtags.length > 0) {
@@ -231,7 +178,7 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
                   if (Math.random() <= accuracy) {
                     console.log('Attack hits!')
                     const damage = Math.floor(Math.random() * (max - min + 1)) + min
-                    console.log('Damage:', damage)
+                    console.log('Damage', damage)
                     next_bout_state.player_data[next_id].health -= damage
 
                     if (next_bout_state.player_data[next_id].health <= 0) {
@@ -241,23 +188,13 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
 
                       // Post tweet
                       twitter.post('statuses/update', {status: reply_tweet, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
-                        if (!error) {
-                          console.log('Replied!', reply.text)
-                        } else {
-                          console.log('Tweet failed.')
-                          console.log(error)
-                        }
+                        console.log(error || 'Replied: ' + reply.text)
                       })
 
                       // Delete bout
                       console.log('Delete:', bout_id)
                       client.query('DELETE FROM bouts WHERE id = $1', [bout_id], function(err, rows) {
-                        if (!err) {
-                          console.log('Deleted bout.')
-                        } else {
-                          console.log(err)
-                          console.log('Failed to delete db')
-                        }
+                        console.log(err || 'Deleted bout.')
                       })
                       break
                     } else {
@@ -267,51 +204,36 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
 
                       // Post tweet
                       twitter.post('statuses/update', {status: reply_tweet, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
-                        if (!error) {
-                          console.log('Replied!', reply.text)
-                        } else {
-                          console.log('Tweet failed.')
-                          console.log(error)
-                        }
+                        console.log(error || 'Replied: ' + reply.text)
                       })
                       break
                     }
                   } else {
-                    console.log('Attack missed')
+                    console.log('Attack missed.')
 
                     // Tweet 'You missed @' + player_data[next_id].screen_name + '!'
                     // Compose tweet
                     const reply_tweet = '@' + player_data[current_id].screen_name + ' Your attack missed. Your move, @' + player_data[next_id].screen_name + '!'
-                    console.log('Reply:', reply_tweet)
+                    console.log('Reply', reply_tweet)
 
                     // Post tweet
                     twitter.post('statuses/update', {status: reply_tweet, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
-                      if (!error) {
-                        console.log('Replied!', reply.text)
-                      } else {
-                        console.log('Tweet failed.')
-                        console.log(error)
-                      }
+                      console.log(error || 'Replied: ' + reply.text)
                     })
                     break
                   }
                 } else {
                   // No hashtags found that matched moves
-                  console.log(move + ' is not a valid move')
+                  console.log(move + ' is not a valid move.')
 
                   // Tweet 'Not a valid move!'
                   // Compose tweet
                   const reply_tweet = '@' + player_data[current_id].screen_name + ' Epic fail! Your move, @' + player_data[next_id].screen_name + '.'
-                  console.log('Reply:', reply_tweet)
+                  console.log('Reply', reply_tweet)
 
                   // Post tweet
                   twitter.post('statuses/update', {status: reply_tweet, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
-                    if (!error) {
-                      console.log('Replied!', reply.text)
-                    } else {
-                      console.log('Tweet failed.')
-                      console.log(error)
-                    }
+                    console.log(error || 'Replied: ' + reply.text)
                   })
                 }
               }
@@ -322,27 +244,23 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
               // 'Were you going to make a move? @' + player_data[next_id].screen_name + '/'s turn!'
               // Compose tweet
               const reply_tweet = '@' + player_data[current_id].screen_name + ' No move detected... Your move, @' + player_data[next_id].screen_name + '!'
-              console.log('Reply:', reply_tweet)
+              console.log('Reply', reply_tweet)
 
               // Post tweet
               twitter.post('statuses/update', {status: reply_tweet, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
-                if (!error) {
-                  console.log('Replied!', reply.text)
-                } else {
-                  console.log('Tweet failed.')
-                  console.log(error)
-                }
+                console.log(error || 'Replied: ' + reply.text)
               })
             }
 
-            console.log('To store:', next_bout_state)
-            client.query('UPDATE bouts SET tweet_id = $1, current_id = $2, next_id = $3, player_data = $4 WHERE id = $5', [next_bout_state.tweet_id, next_bout_state.current_id, next_bout_state.next_id, next_bout_state.player_data, bout_id], function(err, rows) {
-              if (!err) {
-                console.log('Updated bout in db')
-              } else {
-                console.log(err)
-                console.log('Failed to update db')
-              }
+            console.log('Updating bouts...')
+            client.query('UPDATE bouts SET tweet_id = $1, current_id = $2, next_id = $3, player_data = $4 WHERE id = $5', [
+              next_bout_state.tweet_id,
+              next_bout_state.current_id,
+              next_bout_state.next_id,
+              next_bout_state.player_data,
+              bout_id
+            ], function(err, rows) {
+              console.log(err || 'Updated bout in db')
             })
           } else {
             console.log('OLD TWEET OR NOT THEIR TURN')
@@ -358,7 +276,6 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
     })
   } else {
     // Getting mentions from Twitter failed
-    console.log('Getting tweets failed.')
     console.log(error)
   }
 })
