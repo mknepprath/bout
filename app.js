@@ -2,7 +2,6 @@ const TwitterPackage = require('twitter')
 const pg = require('pg')
 const tweets = require('./tweets')
 const items = require('./items')
-const item_list = Object.keys(items)
 const bout_bot_id = '2578652522'
 const {
   DATABASE_URL,
@@ -13,8 +12,7 @@ const {
 } = process.env
 
 // Connect to database
-const conString = DATABASE_URL + '?ssl=true'
-const client = new pg.Client(conString)
+const client = new pg.Client(DATABASE_URL + '?ssl=true')
 client.connect()
 
 // Initialize Twitter
@@ -111,6 +109,7 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
               console.log('NEW BOUT')
 
               // Create new players object
+              const item_list = Object.keys(items)
               let player_data = {}
               player_data[current_id] = {}
               player_data[next_id] = {}
@@ -120,32 +119,33 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
                 player_data[p].health = 12
               }
 
-              // Create bout object to store
-              // TODO: Could this be an array and get passed in that way...
-              const new_bout = {
-                tweet_id: tweet_id,
-                current_id: current_id,
-                next_id: next_id,
-                player_data: player_data
-              }
+              // Create bout array to store
+              const new_bout = [
+                tweet_id,
+                current_id,
+                next_id,
+                player_data
+              ]
 
               // INSERT INTO players
-              client.query('INSERT INTO bouts (tweet_id, current_id, next_id, player_data) values ($1, $2, $3, $4)', [new_bout.tweet_id, new_bout.current_id, new_bout.next_id, new_bout.player_data], function(err, rows) {
+              client.query('INSERT INTO bouts (tweet_id, current_id, next_id, player_data) values ($1, $2, $3, $4)', new_bout, function(err, rows) {
                 console.log(err || 'Added bout to db')
               })
 
               // Compose tweet
-              const reply_tweet = '@' + player_data[current_id].screen_name + ' Game on! You have ' + player_data[current_id].item + ' (#' + items[player_data[current_id].item].move + '). @' + player_data[next_id].screen_name + ' has ' + player_data[next_id].item + ' (#' + items[player_data[next_id].item].move + '). Your move, @' + player_data[current_id].screen_name + '!'
-              console.log('Reply:', reply_tweet)
+              const status = '@' +
+                player_data[current_id].screen_name + ' Game on! You have ' +
+                player_data[current_id].item + ' (#' +
+                items[player_data[current_id].item].move + '). @' +
+                player_data[next_id].screen_name + ' has ' +
+                player_data[next_id].item + ' (#' +
+                items[player_data[next_id].item].move + '). Your move, @' +
+                player_data[current_id].screen_name + '!'
+              console.log('Reply:', status)
 
               // Post tweet
-              twitter.post('statuses/update', {status: reply_tweet, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
-                if (!error) {
-                  console.log('Replied!', reply.text)
-                } else {
-                  console.log('Tweet failed.')
-                  console.log(error)
-                }
+              twitter.post('statuses/update', {status, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
+                console.log(error || 'Replied: ' + reply.text)
               })
 
             } else {
@@ -183,11 +183,11 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
 
                     if (next_bout_state.player_data[next_id].health <= 0) {
                       // Compose tweet
-                      const reply_tweet = '@' + player_data[current_id].screen_name + ' You win! Better luck next time, @' + player_data[next_id].screen_name + '.'
-                      console.log('Reply:', reply_tweet)
+                      const status = '@' + player_data[current_id].screen_name + ' You win! Better luck next time, @' + player_data[next_id].screen_name + '.'
+                      console.log('Reply:', status)
 
                       // Post tweet
-                      twitter.post('statuses/update', {status: reply_tweet, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
+                      twitter.post('statuses/update', {status, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
                         console.log(error || 'Replied: ' + reply.text)
                       })
 
@@ -199,11 +199,11 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
                       break
                     } else {
                       // Compose tweet
-                      const reply_tweet = '@' + player_data[current_id].screen_name + ' Wow! @' + player_data[next_id].screen_name + ' took ' + damage + ' damage. ' + next_bout_state.player_data[next_id].health + ' health remaining. Your move, @' + player_data[next_id].screen_name + '!'
-                      console.log('Reply:', reply_tweet)
+                      const status = '@' + player_data[current_id].screen_name + ' Wow! @' + player_data[next_id].screen_name + ' took ' + damage + ' damage. ' + next_bout_state.player_data[next_id].health + ' health remaining. Your move, @' + player_data[next_id].screen_name + '!'
+                      console.log('Reply:', status)
 
                       // Post tweet
-                      twitter.post('statuses/update', {status: reply_tweet, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
+                      twitter.post('statuses/update', {status, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
                         console.log(error || 'Replied: ' + reply.text)
                       })
                       break
@@ -213,11 +213,11 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
 
                     // Tweet 'You missed @' + player_data[next_id].screen_name + '!'
                     // Compose tweet
-                    const reply_tweet = '@' + player_data[current_id].screen_name + ' Your attack missed. Your move, @' + player_data[next_id].screen_name + '!'
-                    console.log('Reply', reply_tweet)
+                    const status = '@' + player_data[current_id].screen_name + ' Your attack missed. Your move, @' + player_data[next_id].screen_name + '!'
+                    console.log('Reply', status)
 
                     // Post tweet
-                    twitter.post('statuses/update', {status: reply_tweet, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
+                    twitter.post('statuses/update', {status, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
                       console.log(error || 'Replied: ' + reply.text)
                     })
                     break
@@ -228,11 +228,11 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
 
                   // Tweet 'Not a valid move!'
                   // Compose tweet
-                  const reply_tweet = '@' + player_data[current_id].screen_name + ' Epic fail! Your move, @' + player_data[next_id].screen_name + '.'
-                  console.log('Reply', reply_tweet)
+                  const status = '@' + player_data[current_id].screen_name + ' Epic fail! Your move, @' + player_data[next_id].screen_name + '.'
+                  console.log('Reply', status)
 
                   // Post tweet
-                  twitter.post('statuses/update', {status: reply_tweet, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
+                  twitter.post('statuses/update', {status, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
                     console.log(error || 'Replied: ' + reply.text)
                   })
                 }
@@ -243,11 +243,11 @@ twitter.get('statuses/mentions_timeline', function(error, mentions, response) {
 
               // 'Were you going to make a move? @' + player_data[next_id].screen_name + '/'s turn!'
               // Compose tweet
-              const reply_tweet = '@' + player_data[current_id].screen_name + ' No move detected... Your move, @' + player_data[next_id].screen_name + '!'
-              console.log('Reply', reply_tweet)
+              const status = '@' + player_data[current_id].screen_name + ' No move detected... Your move, @' + player_data[next_id].screen_name + '!'
+              console.log('Reply', status)
 
               // Post tweet
-              twitter.post('statuses/update', {status: reply_tweet, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
+              twitter.post('statuses/update', {status, in_reply_to_status_id: tweet_id}, function(error, reply, response) {
                 console.log(error || 'Replied: ' + reply.text)
               })
             }

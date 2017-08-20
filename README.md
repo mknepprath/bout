@@ -16,5 +16,6 @@ From psql command line:
 \dt => lists all tables
 \q => quit psql
 select * from bouts; => lists all bouts
+delete from bouts where in_progress = 't'; => delete rows from bouts
 :q => quit table view
 drop table [table name] => deletes table
