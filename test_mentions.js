@@ -60,7 +60,7 @@ const test_mentions = [
   {
     created_at: 'Sat Aug 19 03:55:09 +0000 2017', // USED
     id_str: '999999', // USED
-    text: '@bout_bot cHaLlEnGe @ash #swing', // USED
+    text: '@bout_bot cHaLlEnGe @ash #swing @ignorethis', // USED
     in_reply_to_user_id_str: '2578652522', // USED
     entities: {
       hashtags: [
@@ -77,6 +77,10 @@ const test_mentions = [
           screen_name: 'ash', // USED
           name: 'Ash Ketchum',
           id_str: '456' // USED
+        }, {
+          screen_name: 'ignorethis', // USED
+          name: 'Ignored One',
+          id_str: '789' // USED
         }
       ] // USED
     },

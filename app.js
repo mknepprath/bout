@@ -104,15 +104,17 @@ const handleMentions = (bouts, mentions) => {
 
     console.log('Mention #' + i, '@' + screen_name + ' tweeted "' + text + '" (' + age + ' days ago)')
 
-    // Check if an opponent is mentioned
+    // Get all users mentioned (except @bout_bot)
+    let _users = [current_id]
     if (user_mentions.length > 1) {
-      let _players = [current_id]
       for (m in user_mentions) {
         const { id_str } = user_mentions[m]
         if (id_str !== bout_bot_id) {
-          _players.push(id_str)
+          _users.push(id_str)
         }
       }
+      // Only use first two accounts mentioned
+      const _players = _users.slice(0, 2)
       const bout_id = _players.sort().join('-')
       const bout = bouts.find(bout => bout.bout_id === bout_id)
       console.log('Bout', bout ? bout.bout_id : bout_id)
@@ -171,18 +173,21 @@ const handleMentions = (bouts, mentions) => {
 
     // Create array of everyone involved in bout
     // TODO: limit to 2 for now
-    const players = [
+    const users = [
       { screen_name, name, id_str },
       ...user_mentions // TODO: Indices gets added here..
     ]
 
     // Remove bout_bout from array
-    for (let p in players) {
-      if (players[p].id_str === bout_bot_id ) {
-        players.splice(p, 1)
+    for (let p in users) {
+      if (users[p].id_str === bout_bot_id ) {
+        users.splice(p, 1)
         break
       }
     }
+
+    // Only use first two accounts mentioned
+    const players = users.slice(0, 2)
 
     const bout_in_progress = bout && bout.in_progress
     const bout_start = text.toLowerCase().indexOf('challenge') > -1
