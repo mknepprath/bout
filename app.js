@@ -105,8 +105,14 @@ const handleMentions = (bouts, mentions) => {
 
     // Check if an opponent is mentioned
     if (user_mentions.length > 1) {
-      const {id_str: next_id, screen_name: next_screen_name} = user_mentions[1]
-      const bout_id = [current_id, next_id].sort().join('-')
+      let _players = [current_id]
+      for (m in user_mentions) {
+        const { id_str } = user_mentions[m]
+        if (id_str !== bout_bot_id) {
+          _players.push(id_str)
+        }
+      }
+      const bout_id = _players.sort().join('-')
       const bout = bouts.find(bout => bout.bout_id === bout_id)
       console.log('Bout', bout ? bout.bout_id : bout_id)
 
