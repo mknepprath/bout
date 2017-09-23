@@ -3,7 +3,7 @@ const pg = require('pg')
 const test_mentions = require('./test_mentions')
 const items = require('./items')
 const bout_bot_id = '2578652522'
-const dev = false
+const dev = true
 const {
   DATABASE_URL,
   CONSUMER_KEY: consumer_key,
@@ -166,7 +166,7 @@ const handleMentions = (bouts, mentions) => {
     // TODO: limit to 2 for now
     const players = [
       { screen_name, name, id_str },
-      ...user_mentions // TODO: Indices gets added here...
+      ...user_mentions // TODO: Indices gets added here..
     ]
 
     // Remove bout_bout from array
@@ -276,7 +276,7 @@ const handleMentions = (bouts, mentions) => {
                 status += 'Epic fail! You do not have the move "' + move + '". Your move, @' + screen_name + '.'
               }
             } else {
-              status += 'No move detected... Your move, @' + screen_name + '!'
+              status += 'No move detected.. Your move, @' + screen_name + '!'
             }
           }
         })
@@ -291,7 +291,7 @@ const handleMentions = (bouts, mentions) => {
         save('UPDATE bouts SET in_progress = $1, player_data = $2 WHERE bout_id = $3', updated_bout)
         tweet(status, id_str)
       } else {
-        console.log('This tweet is... old.')
+        console.log('This tweet is.. old.')
       }
     }
     console.log('---')
