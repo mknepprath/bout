@@ -123,7 +123,7 @@ const handleMentions = (bouts, mentions) => {
       // --- Although they'd have to do multiple valid initiating bout tweets,
       // but could happen
       if (!bout) {
-        if (text.indexOf('challenge') > -1) {
+        if (text.toLowerCase().indexOf('challenge') > -1) {
           queued_bouts[bout_id] = i
           queue[i] = {
             bout_id,
@@ -184,14 +184,15 @@ const handleMentions = (bouts, mentions) => {
       }
     }
 
-    if (
-      bout === undefined && text.indexOf('challenge') <= -1 ||
-      bout && !bout.in_progress && text.indexOf('challenge') <= -1) {
+    const bout_in_progress = bout && bout.in_progress
+    const bout_start = text.toLowerCase().indexOf('challenge') > -1
+
+    // Could turn "in_progress" to a simple if/else, then nest bout_start
+    // inside as another if/else
+    if (!bout_in_progress && !bout_start) {
       // IGNORE //
       console.log('Not playing Bout (yet). Ignore.')
-    } else if (
-      bout === undefined && text.indexOf('challenge') > -1 ||
-      bout && !bout.in_progress && text.indexOf('challenge') > -1) {
+    } else if (!bout_in_progress && bout_start) {
       // NEW BOUT //
       console.log('NEW BOUT')
 
