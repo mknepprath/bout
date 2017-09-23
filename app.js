@@ -4,14 +4,14 @@ const test_mentions = require('./test_mentions')
 const items = require('./items')
 const bout_bot_id = '2578652522'
 const {
-  ENV,
+  NODE_ENV,
   DATABASE_URL,
   CONSUMER_KEY: consumer_key,
   CONSUMER_SECRET: consumer_secret,
   ACCESS_TOKEN_KEY: access_token_key,
   ACCESS_TOKEN_SECRET: access_token_secret
 } = process.env
-const dev = ENV !== 'production'
+const dev = NODE_ENV !== 'production'
 
 // Connect to database
 const client = new pg.Client(DATABASE_URL + '?ssl=true')
