@@ -252,7 +252,7 @@ const handleMentions = (bouts, mentions) => {
         let in_progress = true
 
         players.forEach((id, p) => {
-          const { turn, screen_name } = players[p]
+          const { turn, screen_name, name } = players[p]
           // Switch turn for every player
           next.player_data.players[p].turn = !turn
           // Assign tweet_id to player
@@ -273,7 +273,7 @@ const handleMentions = (bouts, mentions) => {
                     status += 'You win! Better luck next time, @' + screen_name + '.'
                     in_progress = false
                   } else {
-                    status += 'Wow! @' + screen_name + ' took ' + damage + ' damage. ' + next.player_data.players[p].health + ' health remaining. Your move, @' + screen_name + '!'
+                    status += 'Wow! @' + screen_name + ' took ' + damage + ' damage. ' + next.player_data.players[p].health + ' health remaining. Your move, ' + name + '!'
                   }
                 } else {
                   status += 'Your attack missed. Your move, @' + screen_name + '!'
