@@ -273,7 +273,7 @@ const handleMentions = (bouts, mentions) => {
                     status += 'You win! Better luck next time, @' + screen_name + '.'
                     in_progress = false
                   } else {
-                    status += 'Wow! @' + screen_name + ' took ' + damage + ' damage. ' + next.player_data.players[p].health + ' health remaining. Your move, ' + name + '!'
+                    status += 'Wow! ' + name + ' took ' + damage + ' damage. ' + next.player_data.players[p].health + ' health remaining. Your move, @' + screen_name + '!'
                   }
                 } else {
                   status += 'Your attack missed. Your move, @' + screen_name + '!'
