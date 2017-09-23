@@ -3,7 +3,7 @@ const pg = require('pg')
 const test_mentions = require('./test_mentions')
 const items = require('./items')
 const bout_bot_id = '2578652522'
-const dev = true
+const dev = false
 const {
   DATABASE_URL,
   CONSUMER_KEY: consumer_key,
