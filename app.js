@@ -3,7 +3,7 @@ const pg = require('pg')
 const test_mentions = require('./test_mentions')
 const items = require('./items')
 const bout_bot_id = '2578652522'
-const dev = false
+const dev = true
 const {
   DATABASE_URL,
   CONSUMER_KEY: consumer_key,
@@ -80,8 +80,19 @@ const handleMentions = (bouts, mentions) => {
   let queued_bouts = {}
 
   for (i in mentions) {
-    // Get user_id, created_id for current mention (TODO: delete text, screen_name)
-    const { id_str: tweet_id, text, created_at, user: { id_str: current_id, screen_name }, entities: { user_mentions } } = mentions[i]
+    // Get user_id, created_id for current mention
+    // TODO: delete text, screen_name
+    const {
+      text,
+      created_at,
+      user: {
+        id_str: current_id,
+        screen_name
+      },
+      entities: {
+        user_mentions
+      }
+    } = mentions[i]
 
     // Calculate age of tweet in days
     const created_date = new Date(created_at)
@@ -95,25 +106,32 @@ const handleMentions = (bouts, mentions) => {
     // Check if an opponent is mentioned
     if (user_mentions.length > 1) {
       const {id_str: next_id, screen_name: next_screen_name} = user_mentions[1]
-
-      // Get bout_id
-      let current_bout_id
-      for (b in bouts) {
-        const { bout_id, tweet_id: bout_tweet_id, current_id: bout_current_id, next_id: bout_next_id } = bouts[b]
-        // Second of these can go away once current_id is always the player whose turn it is
-        if ([current_id, next_id].sort().join('-') === bout_id) current_bout_id = bout_id
-      }
-      console.log('Bout:', current_bout_id)
+      const bout_id = [current_id, next_id].sort().join('-')
+      const bout = bouts.find(bout => bout.bout_id === bout_id)
+      console.log('Bout', bout ? bout.bout_id : bout_id)
 
       // Queue this bout if it hasn't been queued yet
-      // TODO: Better handle undefined (new) bouts, this probably allows multiple rounds with the same players to start at the same time
-      // --- Although they'd have to do multiple valid initiating bout tweets, but could happen
-      if (!queued_bouts[current_bout_id] || current_bout_id === undefined) {
-        if (current_bout_id !== undefined) queued_bouts[current_bout_id] = i
-        // TODO: Can handle some tweet validation here - such as, shouldn't queue up non-turn tweets or invalid init tweets
-        queue[i] = {
-          bout_id: current_bout_id,
-          mention: mentions[i]
+      // TODO: Better handle undefined (new) bouts, this probably allows
+      // multiple rounds with the same players to start at the same time
+      // --- Although they'd have to do multiple valid initiating bout tweets,
+      // but could happen
+      if (!bout) {
+        if (text.indexOf('challenge') > -1) {
+          queued_bouts[bout_id] = i
+          queue[i] = {
+            bout_id,
+            mention: mentions[i]
+          }
+        }
+      } else if (!queued_bouts[bout.bout_id]) {
+        // Store latest tweet from a bout
+        const _player = bout.player_data.players.find(player => player.turn)
+        if (_player.id_str === current_id) {
+          queued_bouts[bout.bout_id] = i
+          queue[i] = {
+            bout_id: bout.bout_id,
+            mention: mentions[i]
+          }
         }
       }
       console.log('---')
@@ -125,16 +143,31 @@ const handleMentions = (bouts, mentions) => {
   console.log('===============')
 
   for (q in queue) {
-    // Get user_id, created_id for current mention (TODO: delete text, screen_name)
+    // Get user_id, created_id for current mention
+    // TODO: delete text, screen_name
     const { bout_id, mention } = queue[q]
-    const { id_str: tweet_id, text, user, user: { screen_name: s }, entities: { user_mentions } } = mention
-    console.log('#' + q, '@' + s + ' tweeted "' + text + '"')
+    const {
+      id_str: tweet_id,
+      text,
+      user: {
+        screen_name,
+        name,
+        id_str
+      },
+      entities: {
+        user_mentions
+      }
+    } = mention
+    console.log('#' + q, '@' + screen_name + ' tweeted "' + text + '"')
 
     const bout = bouts.find(bout => bout.bout_id === bout_id) // Bout data
 
     // Create array of everyone involved in bout
     // TODO: limit to 2 for now
-    const players = [user, ...user_mentions]
+    const players = [
+      { screen_name, name, id_str },
+      ...user_mentions // TODO: Indices gets added here...
+    ]
 
     // Remove bout_bout from array
     for (let p in players) {
@@ -144,10 +177,14 @@ const handleMentions = (bouts, mentions) => {
       }
     }
 
-    if (bout === undefined && text.indexOf('challenge') <= -1 || bout && !bout.in_progress && text.indexOf('challenge') <= -1) {
+    if (
+      bout === undefined && text.indexOf('challenge') <= -1 ||
+      bout && !bout.in_progress && text.indexOf('challenge') <= -1) {
       // IGNORE //
       console.log('Not playing Bout (yet). Ignore.')
-    } else if (bout === undefined && text.indexOf('challenge') > -1 || bout && !bout.in_progress && text.indexOf('challenge') > -1) {
+    } else if (
+      bout === undefined && text.indexOf('challenge') > -1 ||
+      bout && !bout.in_progress && text.indexOf('challenge') > -1) {
       // NEW BOUT //
       console.log('NEW BOUT')
 
@@ -157,6 +194,7 @@ const handleMentions = (bouts, mentions) => {
       players.forEach((id, p) => {
         players[p].item = getItem()
         players[p].health = 12
+        players[p].tweet_id = !p ? tweet_id : ''
         players[p].turn = !p
       })
 
@@ -166,13 +204,9 @@ const handleMentions = (bouts, mentions) => {
       // Create bout array to store
       const new_bout = [
         new_bout_id,
-        tweet_id,
         in_progress,
         player_data
       ]
-
-      // INSERT INTO players
-      save('INSERT INTO bouts (bout_id, tweet_id, in_progress, player_data) values ($1, $2, $3, $4)', new_bout)
 
       // Compose tweet
       const status = '@' +
@@ -183,74 +217,83 @@ const handleMentions = (bouts, mentions) => {
         players[1].item + ' (#' +
         items[players[1].item].move + '). Your move, @' +
         players[0].screen_name + '!'
-      tweet(status, tweet_id)
 
-    } else if (tweet_id !== bout.tweet_id) {
+      save('INSERT INTO bouts (bout_id, in_progress, player_data) values ($1, $2, $3)', new_bout)
+      tweet(status, tweet_id)
+    } else {
       // CURRENT BOUT //
       console.log('Bout:', bout_id)
 
-      const { players: player_data } = bout.player_data
+      const { players } = bout.player_data
 
-      console.log('Players:', player_data[0].screen_name + ' (' + player_data[0].item + ') vs ' + player_data[1].screen_name + ' (' + player_data[1].item + ')')
+      console.log(
+        'Players:',
+        players[0].screen_name + ' (' +
+        players[0].item + ') vs ' +
+        players[1].screen_name + ' (' +
+        players[1].item + ')'
+      )
 
-      const {id_str: tweet_id, entities: {hashtags}} = queue[q].mention
+      const {id_str, entities: {hashtags}} = queue[q].mention
 
-      let next = {
-        ...bout,
-        tweet_id
-      }
+      let next = {...bout}
 
-      const _player = player_data.find(player => player.turn) // Hopefully only returns player whose turn it is...
-      const { item } = _player
+      const _player = players.find(player => player.turn)
+      const { item, tweet_id } = _player
 
-      let status = '@' + _player.screen_name + ' '
-      let in_progress = true
+      if (id_str !== tweet_id) {
+        let status = '@' + _player.screen_name + ' '
+        let in_progress = true
 
-      player_data.forEach((id, p) => {
-        const { turn, screen_name } = player_data[p]
-        // Switch turn for every player
-        next.player_data.players[p].turn = !turn
-        // If not this player's turn, calc damage
-        if (!turn) {
-          if (hashtags.length > 0) {
-            const {move, accuracy, minDamage: min, maxDamage: max} = items[item]
-            if (hashtags[0].text.toLowerCase() === move) { // Only checks first hashtag
-              if (Math.random() <= accuracy) {
-                const damage = Math.floor(Math.random() * (max - min + 1)) + min
-                // Tricky way of specifying other player: 1 - 1 = 0 (other player), |0 - 1| = 1 (other player)
-                next.player_data.players[p].health -= damage
-                if (next.player_data.players[p].health <= 0) {
-                  status += 'You win! Better luck next time, @' + screen_name + '.'
-                  in_progress = false
+        players.forEach((id, p) => {
+          const { turn, screen_name } = players[p]
+          // Switch turn for every player
+          next.player_data.players[p].turn = !turn
+          // Assign tweet_id to player
+          if (turn) {
+            next.player_data.players[p].tweet_id = id_str
+          } else {
+            // If not this player's turn, calc damage
+            if (hashtags.length > 0) {
+              const {move, accuracy, minDamage: min, maxDamage: max} = items[item]
+              // Only checks first hashtag
+              if (hashtags[0].text.toLowerCase() === move) {
+                if (Math.random() <= accuracy) {
+                  const damage = Math.floor(Math.random() * (max - min + 1)) + min
+                  // Tricky way of specifying other player:
+                  // 1 - 1 = 0 (other player), |0 - 1| = 1 (other player)
+                  next.player_data.players[p].health -= damage
+                  if (next.player_data.players[p].health <= 0) {
+                    status += 'You win! Better luck next time, @' + screen_name + '.'
+                    in_progress = false
+                  } else {
+                    status += 'Wow! @' + screen_name + ' took ' + damage + ' damage. ' + next.player_data.players[p].health + ' health remaining. Your move, @' + screen_name + '!'
+                  }
                 } else {
-                  status += 'Wow! @' + screen_name + ' took ' + damage + ' damage. ' + next.player_data.players[p].health + ' health remaining. Your move, @' + screen_name + '!'
+                  status += 'Your attack missed. Your move, @' + screen_name + '!'
                 }
               } else {
-                status += 'Your attack missed. Your move, @' + screen_name + '!'
+                status += 'Epic fail! You do not have the move "' + move + '". Your move, @' + screen_name + '.'
               }
             } else {
-              status += 'Epic fail! You do not have the move "' + move + '". Your move, @' + screen_name + '.'
+              status += 'No move detected... Your move, @' + screen_name + '!'
             }
-          } else {
-            status += 'No move detected... Your move, @' + screen_name + '!'
           }
-        }
-      })
+        })
 
-      console.log('Updating bouts...')
-      const updated_bout = [
-        next.tweet_id,
-        in_progress,
-        next.player_data,
-        bout_id
-      ]
+        console.log('Updating bout', bout_id)
+        const updated_bout = [
+          in_progress,
+          next.player_data,
+          bout_id
+        ]
 
-      tweet(status, tweet_id)
-      save('UPDATE bouts SET tweet_id = $1, in_progress = $2, player_data = $3 WHERE bout_id = $4', updated_bout)
-    } else {
-      console.log('OLD TWEET OR NOT THEIR TURN')
+        save('UPDATE bouts SET in_progress = $1, player_data = $2 WHERE bout_id = $3', updated_bout)
+        tweet(status, id_str)
+      } else {
+        console.log('This tweet is... old.')
+      }
     }
-
     console.log('---')
   }
   setTimeout(function () {

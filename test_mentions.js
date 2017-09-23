@@ -2,12 +2,12 @@ const test_mentions = [
   {
     created_at: 'Sun Aug 20 03:55:09 +0000 2017', // USED
     id_str: '1000001', // USED
-    text: '@bout_bot @mknepprath #swing', // USED
+    text: '@bout_bot @mknepprath #throw', // USED
     in_reply_to_user_id_str: '2578652522', // USED
     entities: {
       hashtags: [
         {
-          text: 'swing'
+          text: 'throw'
         }
       ], // USED
       user_mentions: [
