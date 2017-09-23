@@ -3,7 +3,7 @@ const pg = require('pg')
 const test_mentions = require('./test_mentions')
 const items = require('./items')
 const bout_bot_id = '2578652522'
-const dev = false
+const dev = true
 const {
   DATABASE_URL,
   CONSUMER_KEY: consumer_key,
@@ -236,7 +236,7 @@ const handleMentions = (bouts, mentions) => {
 
       const {id_str, entities: {hashtags}} = queue[q].mention
 
-      let next = {...bout}
+      let next = Object.assign({}, bout)
 
       const _player = players.find(player => player.turn)
       const { item, tweet_id } = _player
