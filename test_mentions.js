@@ -1,93 +1,118 @@
 const test_mentions = [
-  {
-    created_at: 'Sun Aug 20 03:55:09 +0000 2017', // USED
-    id_str: '1000001', // USED
-    text: '@bout_bot @mknepprath #swing', // USED
-    in_reply_to_user_id_str: '2578652522', // USED
+  { // ASH FIRST ATTACK
+    created_at: 'Sun Aug 20 03:55:09 +0000 2017',
+    id_str: '1000002',
+    text: '@bout_bot @mknepprath #throw',
+    in_reply_to_user_id_str: '2578652522',
     entities: {
       hashtags: [
         {
-          text: 'swing'
+          text: 'throw'
         }
-      ], // USED
+      ],
       user_mentions: [
         {
-          screen_name: 'bout_bot', // USED
+          screen_name: 'bout_bot',
           name: 'Bout',
-          id_str: '2578652522' // USED
+          id_str: '2578652522'
         }, {
-          screen_name: 'mknepprath', // USED
+          screen_name: 'mknepprath',
           name: 'Michael Knepprath',
-          id_str: '123' // USED
+          id_str: '123'
         }
-      ] // USED
+      ]
     },
     user: {
-      id_str: '456', // USED
-      name: 'Ash Ketchum', // USED
-      screen_name: 'ash', // USED
+      id_str: '456',
+      name: 'Ash Ketchum',
+      screen_name: 'ash',
     }
   },
-  {
-    created_at: 'Sat Aug 19 03:55:10 +0000 2017', // USED
-    id_str: '1000000', // USED
-    text: '@bout_bot @ash #punch', // USED
-    in_reply_to_user_id_str: '2578652522', // USED
+  { // ASH FAIL TWEET
+    created_at: 'Sun Aug 20 03:55:09 +0000 2017',
+    id_str: '1000001',
+    text: '@bout_bot @mknepprath throw?',
+    in_reply_to_user_id_str: '2578652522',
+    entities: {
+      hashtags: [],
+      user_mentions: [
+        {
+          screen_name: 'bout_bot',
+          name: 'Bout',
+          id_str: '2578652522'
+        }, {
+          screen_name: 'mknepprath',
+          name: 'Michael Knepprath',
+          id_str: '123'
+        }
+      ]
+    },
+    user: {
+      id_str: '456',
+      name: 'Ash Ketchum',
+      screen_name: 'ash',
+    }
+  },
+  { // MK FIRST ATTACK
+    created_at: 'Sat Aug 19 03:55:10 +0000 2017',
+    id_str: '1000000',
+    text: '@bout_bot @ash #punch',
+    in_reply_to_user_id_str: '2578652522',
     entities: {
       hashtags: [
         {
           text: 'punch'
         }
-      ], // USED
+      ],
       user_mentions: [
         {
-          screen_name: 'bout_bot', // USED
+          screen_name: 'bout_bot',
           name: 'Bout',
-          id_str: '2578652522' // USED
+          id_str: '2578652522'
         }, {
-          screen_name: 'ash', // USED
+          screen_name: 'ash',
           name: 'Ash Ketchum',
-          id_str: '456' // USED
+          id_str: '456'
         }
-      ] // USED
+      ]
     },
     user: {
-      id_str: '123', // USED
-      name: 'Michael Knepprath', // USED
-      screen_name: 'mknepprath', // USED
+      id_str: '123',
+      name: 'Michael Knepprath',
+      screen_name: 'mknepprath',
     }
   },
-  {
-    created_at: 'Sat Aug 19 03:55:09 +0000 2017', // USED
-    id_str: '999999', // USED
-    text: '@bout_bot cHaLlEnGe @ash #swing @ignorethis', // USED
-    in_reply_to_user_id_str: '2578652522', // USED
+  { // VALID BOUT START
+    created_at: 'Sat Aug 19 03:55:09 +0000 2017',
+    id_str: '999999',
+    text: '@bout_bot cHaLlEnGe @ash #swing @ignorethis',
+    in_reply_to_user_id_str: '2578652522',
     entities: {
       hashtags: [
         {
           text: 'swing'
         }
-      ], // USED
+      ],
       user_mentions: [
         {
-          screen_name: 'bout_bot', // USED
+          screen_name: 'bout_bot',
           name: 'Bout',
-          id_str: '2578652522' // USED
+          id_str: '2578652522'
         }, {
-          screen_name: 'ash', // USED
+          screen_name: 'ash',
           name: 'Ash Ketchum',
-          id_str: '456' // USED
+          id_str: '456'
         }, {
-          screen_name: 'ignorethis', // USED
+          screen_name: 'ignorethis',
           name: 'Ignored One',
-          id_str: '789' // USED
+          id_str: '789'
         }
-      ] // USED
+      ]
     },
     user: {
-      id_str: '123', // USED
-      name: 'Michael Knepprath', // USED
-      screen_name: 'mknepprath', // USED
+      id_str: '123',
+      name: 'Michael Knepprath',
+      screen_name: 'mknepprath',
     }
   }
 ]
