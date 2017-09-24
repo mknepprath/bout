@@ -192,48 +192,7 @@ const handleMentions = (bouts, mentions) => {
     const bout_in_progress = bout && bout.in_progress
     const bout_start = text.toLowerCase().indexOf('challenge') > -1
 
-    // Could turn "in_progress" to a simple if/else, then nest bout_start
-    // inside as another if/else
-    if (!bout_in_progress && !bout_start) {
-      // IGNORE //
-      console.log('Not playing Bout (yet). Ignore.')
-    } else if (!bout_in_progress && bout_start) {
-      // NEW BOUT //
-      console.log('NEW BOUT')
-
-      // Create bout id
-      const new_bout_id = players.map((p) => p.id_str).sort().join('-')
-
-      players.forEach((id, p) => {
-        players[p].item = getItem()
-        players[p].health = 12
-        players[p].tweet_id = !p ? tweet_id : ''
-        players[p].turn = !p
-      })
-
-      const in_progress = true
-      const player_data = { players }
-
-      // Create bout array to store
-      const new_bout = [
-        new_bout_id,
-        in_progress,
-        player_data
-      ]
-
-      // Compose tweet
-      const status = '@' +
-        players[0].screen_name + ' Game on! You have ' +
-        players[0].item + ' (#' +
-        items[players[0].item].move + '). @' +
-        players[1].screen_name + ' has ' +
-        players[1].item + ' (#' +
-        items[players[1].item].move + '). Your move, @' +
-        players[0].screen_name + '!'
-
-      save('INSERT INTO bouts (bout_id, in_progress, player_data) values ($1, $2, $3)', new_bout)
-      tweet(status, tweet_id)
-    } else {
+    if (bout_in_progress) {
       // CURRENT BOUT //
       console.log('Bout:', bout_id)
 
@@ -252,16 +211,17 @@ const handleMentions = (bouts, mentions) => {
       let next = Object.assign({}, bout)
 
       const _player = players.find(player => player.turn)
-      const { item, tweet_id } = _player
+      const { item, tweet_id, strike } = _player
 
       if (id_str !== tweet_id) {
+        // Step 1. Start status
         let status = '@' + _player.screen_name + ' '
         let in_progress = true
+        let move_success = true
 
+        // Step 2. Add move result
         players.forEach((id, p) => {
           const { turn, screen_name, name } = players[p]
-          // Switch turn for every player
-          next.player_data.players[p].turn = !turn
           // Assign tweet_id to player
           if (turn) {
             next.player_data.players[p].tweet_id = id_str
@@ -273,23 +233,54 @@ const handleMentions = (bouts, mentions) => {
               if (hashtags[0].text.toLowerCase() === move) {
                 if (Math.random() <= accuracy) {
                   const damage = Math.floor(Math.random() * (max - min + 1)) + min
-                  // Tricky way of specifying other player:
-                  // 1 - 1 = 0 (other player), |0 - 1| = 1 (other player)
                   next.player_data.players[p].health -= damage
-                  if (next.player_data.players[p].health <= 0) {
-                    status += 'You win! Better luck next time, @' + screen_name + '.'
+                  const { health } = next.player_data.players[p]
+                  if (health <= 0) {
+                    status += 'You win! '
                     in_progress = false
                   } else {
-                    status += 'Wow! ' + name + ' took ' + damage + ' damage. ' + next.player_data.players[p].health + ' health remaining. Your move, @' + screen_name + '!'
+                    status += 'Wow! ' + name + ' took ' + damage + ' damage. ' + health + ' health remaining. '
                   }
                 } else {
-                  status += 'Your attack missed. Your move, @' + screen_name + '!'
+                  status += 'Your attack missed. '
                 }
               } else {
-                status += 'Epic fail! You do not have the move "' + move + '". Your move, @' + screen_name + '.'
+                status += 'Epic fail! You do not have the move "' + move + '". '
               }
             } else {
-              status += 'No move detected.. Your move, @' + screen_name + '!'
+              status += 'No move detected... '
+              move_success = false
+            }
+          }
+        })
+
+        const next_turn = move_success || strike >= 2
+
+        // Step 3. Add next player action
+        players.forEach((id, p) => {
+          const { turn, screen_name, name } = players[p]
+          if (in_progress && next_turn) {
+            // Switch turn for every player
+            next.player_data.players[p].turn = !turn
+          }
+          if (!turn) {
+            if (in_progress) {
+              if (next_turn) {
+                status += 'Your move, @' + screen_name + '!'
+              } else {
+                status += 'Try again! @' + screen_name + ' can wait.'
+              }
+            } else {
+              status += 'Better luck next time, @' + screen_name + '.'
+            }
+          } else {
+            // Set strikes for current player
+            if (in_progress) {
+              if (next_turn) {
+                next.player_data.players[p].strike = 0
+              } else {
+                next.player_data.players[p].strike += 1
+              }
             }
           }
         })
@@ -305,6 +296,48 @@ const handleMentions = (bouts, mentions) => {
         tweet(status, id_str)
       } else {
         console.log('This tweet is.. old.')
+      }
+    } else {
+      if (bout_start) {
+        // NEW BOUT //
+        console.log('NEW BOUT')
+
+        // Create bout id
+        const new_bout_id = players.map((p) => p.id_str).sort().join('-')
+
+        players.forEach((id, p) => {
+          players[p].item = getItem()
+          players[p].health = 12
+          players[p].tweet_id = !p ? tweet_id : ''
+          players[p].turn = !p
+          players[p].strike = 0
+        })
+
+        const in_progress = true
+        const player_data = { players }
+
+        // Create bout array to store
+        const new_bout = [
+          new_bout_id,
+          in_progress,
+          player_data
+        ]
+
+        // Compose tweet
+        const status = '@' +
+          players[0].screen_name + ' Game on! You have ' +
+          players[0].item + ' (#' +
+          items[players[0].item].move + '). @' +
+          players[1].screen_name + ' has ' +
+          players[1].item + ' (#' +
+          items[players[1].item].move + '). Your move, @' +
+          players[0].screen_name + '!'
+
+        save('INSERT INTO bouts (bout_id, in_progress, player_data) values ($1, $2, $3)', new_bout)
+        tweet(status, tweet_id)
+      } else {
+        // IGNORE //
+        console.log('Not playing Bout (yet). Ignore.')
       }
     }
     console.log('---')
