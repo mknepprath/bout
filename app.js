@@ -268,7 +268,7 @@ const handleMentions = (bouts, mentions) => {
               if (next_turn) {
                 status += 'Your move, @' + screen_name + '!'
               } else {
-                status += 'Try again! @' + screen_name + ' can wait.'
+                status += 'Try again! @' + screen_name + ' is waiting.'
               }
             } else {
               status += 'Better luck next time, @' + screen_name + '.'
