@@ -2,7 +2,7 @@ const TwitterPackage = require('twitter')
 const pg = require('pg')
 const test_mentions = require('./test_mentions')
 const items = require('./items')
-const bout_bot_id = '2578652522'
+const bout_bot_id = '3016652708'
 const {
   NODE_ENV,
   DATABASE_URL,
