@@ -245,7 +245,7 @@ const handleMentions = (bouts, mentions) => {
                   status += 'Your attack missed. '
                 }
               } else {
-                status += 'Epic fail! You do not have the move "' + move + '". '
+                status += 'Epic fail! You do not have the move "' + hashtags[0].text + '". '
               }
             } else {
               status += 'No move detected... '
@@ -262,6 +262,8 @@ const handleMentions = (bouts, mentions) => {
           if (in_progress && next_turn) {
             // Switch turn for every player
             next.player_data.players[p].turn = !turn
+          } else if (!in_progress) {
+            next.player_data.players[p].turn = true
           }
           if (!turn) {
             if (in_progress) {
