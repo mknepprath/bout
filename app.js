@@ -117,19 +117,21 @@ const handleMentions = (bouts, mentions) => {
       const _players = _users.slice(0, 2)
       const bout_id = _players.sort().join('-')
       const bout = bouts.find(bout => bout.bout_id === bout_id)
+      const tweet_id = !!bout && bout.tweet_id
       console.log('Bout', bout ? bout.bout_id : bout_id)
 
-      // Queue this bout if it hasn't been queued yet
-      // TODO: Better handle undefined (new) bouts, this probably allows
-      // multiple rounds with the same players to start at the same time
-      // --- Although they'd have to do multiple valid initiating bout tweets,
-      // but could happen
-      if (!bout) {
+      // If bout isn't in progress (or doesn't exist) and isn't queued...
+      if (!(bout && bout.in_progress) && !queued_bouts[bout_id]) {
+        // check if tweet contains 'challenge'...
         if (text.toLowerCase().indexOf('challenge') > -1) {
+          // if so, "queue" it so older tweets aren't used...
           queued_bouts[bout_id] = i
-          queue[i] = {
-            bout_id,
-            mention: mentions[i]
+          // if this is a new initiating tweet, queue it for real
+          if (tweet_id !== mentions[i].id_str) {
+            queue[i] = {
+              bout_id,
+              mention: mentions[i]
+            }
           }
         }
       } else if (!queued_bouts[bout.bout_id]) {
@@ -218,6 +220,7 @@ const handleMentions = (bouts, mentions) => {
         let status = '@' + _player.screen_name + ' '
         let in_progress = true
         let move_success = true
+        let ignore_strike = false
 
         // Step 2. Add move result
         players.forEach((id, p) => {
@@ -254,7 +257,7 @@ const handleMentions = (bouts, mentions) => {
           }
         })
 
-        const next_turn = move_success || strike >= 2
+        const next_turn = move_success || strike >= 3
 
         // Step 3. Add next player action
         players.forEach((id, p) => {
@@ -262,8 +265,6 @@ const handleMentions = (bouts, mentions) => {
           if (in_progress && next_turn) {
             // Switch turn for every player
             next.player_data.players[p].turn = !turn
-          } else if (!in_progress) {
-            next.player_data.players[p].turn = true
           }
           if (!turn) {
             if (in_progress) {
@@ -282,7 +283,14 @@ const handleMentions = (bouts, mentions) => {
                 next.player_data.players[p].strike = 0
               } else {
                 next.player_data.players[p].strike += 1
+                if (
+                  next.player_data.players[p].strike &&
+                  next.player_data.players[p].strike < 3) {
+                  ignore_strike = true
+                }
               }
+            } else {
+              next.player_data = {}
             }
           }
         })
@@ -295,7 +303,7 @@ const handleMentions = (bouts, mentions) => {
         ]
 
         save('UPDATE bouts SET in_progress = $1, player_data = $2 WHERE bout_id = $3', updated_bout)
-        tweet(status, id_str)
+        if (!ignore_strike) tweet(status, id_str)
       } else {
         console.log('This tweet is.. old.')
       }
@@ -305,7 +313,7 @@ const handleMentions = (bouts, mentions) => {
         console.log('NEW BOUT')
 
         // Create bout id
-        const new_bout_id = players.map((p) => p.id_str).sort().join('-')
+        const bout_id = players.map((p) => p.id_str).sort().join('-')
 
         players.forEach((id, p) => {
           players[p].item = getItem()
@@ -314,15 +322,18 @@ const handleMentions = (bouts, mentions) => {
           players[p].turn = !p
           players[p].strike = 0
         })
-
-        const in_progress = true
         const player_data = { players }
+        const in_progress = true
+        const query = bout
+          ? 'UPDATE bouts SET in_progress = $1, player_data = $2, tweet_id = $3 WHERE bout_id = $4'
+          : 'INSERT INTO bouts (in_progress, player_data, tweet_id, bout_id) values ($1, $2, $3, $4)'
 
         // Create bout array to store
         const new_bout = [
-          new_bout_id,
           in_progress,
-          player_data
+          player_data,
+          tweet_id,
+          bout_id
         ]
 
         // Compose tweet
@@ -335,7 +346,7 @@ const handleMentions = (bouts, mentions) => {
           items[players[1].item].move + '). Your move, @' +
           players[0].screen_name + '!'
 
-        save('INSERT INTO bouts (bout_id, in_progress, player_data) values ($1, $2, $3)', new_bout)
+        save(query, new_bout)
         tweet(status, tweet_id)
       } else {
         // IGNORE //

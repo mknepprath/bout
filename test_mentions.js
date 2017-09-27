@@ -1,13 +1,16 @@
+// ASH punch
+// MK throw
+
 const test_mentions = [
   { // ASH FIRST ATTACK
     created_at: 'Sun Aug 20 03:55:09 +0000 2017',
-    id_str: '1000002',
-    text: '@bout_bot @mknepprath #throw',
+    id_str: String(Math.floor(Math.random() * 100000)),
+    text: '@bout_bot @mknepprath #punch',
     in_reply_to_user_id_str: '3016652708',
     entities: {
       hashtags: [
         {
-          text: 'throw'
+          text: 'punch'
         }
       ],
       user_mentions: [
@@ -31,7 +34,7 @@ const test_mentions = [
   { // ASH FAIL TWEET
     created_at: 'Sun Aug 20 03:55:09 +0000 2017',
     id_str: '1000001',
-    text: '@bout_bot @mknepprath throw?',
+    text: '@bout_bot @mknepprath what?',
     in_reply_to_user_id_str: '3016652708',
     entities: {
       hashtags: [],
@@ -55,13 +58,13 @@ const test_mentions = [
   },
   { // MK FIRST ATTACK
     created_at: 'Sat Aug 19 03:55:10 +0000 2017',
-    id_str: '1000000',
-    text: '@bout_bot @ash #punch',
+    id_str: String(Math.floor(Math.random() * 100)),
+    text: '@bout_bot @ash #throw',
     in_reply_to_user_id_str: '3016652708',
     entities: {
       hashtags: [
         {
-          text: 'punch'
+          text: 'throw'
         }
       ],
       user_mentions: [
@@ -85,12 +88,12 @@ const test_mentions = [
   { // VALID BOUT START
     created_at: 'Sat Aug 19 03:55:09 +0000 2017',
     id_str: '999999',
-    text: '@bout_bot cHaLlEnGe @ash #swing @ignorethis',
+    text: '@bout_bot cHaLlEnGe @ash #throw @ignorethis',
     in_reply_to_user_id_str: '3016652708',
     entities: {
       hashtags: [
         {
-          text: 'swing'
+          text: 'throw'
         }
       ],
       user_mentions: [
