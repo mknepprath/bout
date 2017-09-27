@@ -121,9 +121,9 @@ const handleMentions = (bouts, mentions) => {
       console.log('Bout', bout ? bout.bout_id : bout_id)
 
       // If bout isn't in progress (or doesn't exist) and isn't queued...
-      if ((!bout || !bout.in_progress) && !queued_bouts[bout_id]) {
+      if (!(bout && bout.in_progress)) {
         // check if tweet contains 'challenge'...
-        if (text.toLowerCase().indexOf('challenge') > -1) {
+        if (text.toLowerCase().indexOf('challenge') > -1 && !queued_bouts[bout_id]) {
           // if so, "queue" it so older tweets aren't used...
           queued_bouts[bout_id] = i
           // if this is a new initiating tweet, queue it for real
