@@ -344,7 +344,7 @@ const handleMentions = (bouts, mentions) => {
           players[1].screen_name + ' has ' +
           players[1].item + ' (#' +
           items[players[1].item].move + '). Your move, @' +
-          players[0].screen_name + '!'
+          players[0].screen_name + '! (beta)'
 
         save(query, new_bout)
         tweet(status, tweet_id)
