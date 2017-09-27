@@ -3,6 +3,7 @@ const pg = require('pg')
 const test_mentions = require('./test_mentions')
 const items = require('./items')
 const bout_bot_id = '3016652708'
+const bout_beta_id = '2578652522'
 const {
   NODE_ENV,
   DATABASE_URL,
@@ -109,7 +110,7 @@ const handleMentions = (bouts, mentions) => {
     if (user_mentions.length > 1) {
       for (m in user_mentions) {
         const { id_str } = user_mentions[m]
-        if (id_str !== bout_bot_id) {
+        if (id_str !== bout_bot_id && id_str !== bout_beta_id) {
           _users.push(id_str)
         }
       }
@@ -182,7 +183,7 @@ const handleMentions = (bouts, mentions) => {
 
     // Remove bout_bout from array
     for (let p in users) {
-      if (users[p].id_str === bout_bot_id ) {
+      if (users[p].id_str === bout_bot_id || users[p].id_str === bout_beta_id) {
         users.splice(p, 1)
         break
       }
