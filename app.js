@@ -14,7 +14,6 @@ const {
 } = process.env
 const local = !NODE_ENV
 const dev = local || NODE_ENV === 'development'
-const table = NODE_ENV === 'production' ? 'bouts' : 'boutsbeta'
 
 // Connect to database
 const client = new pg.Client(DATABASE_URL + '?ssl=true')
@@ -29,7 +28,7 @@ const save = (query, data) => {
 
 // Get bouts from database
 const getBouts = (mentions) => {
-  const query = 'SELECT * FROM ' + table + ';'
+  const query = 'SELECT * FROM bouts;'
   const bouts_data = client.query(query)
   bouts_data.on('row', function (row, result) {
     result.addRow(row)
@@ -306,7 +305,7 @@ const handleMentions = (bouts, mentions) => {
           bout_id
         ]
 
-        const query = 'UPDATE ' + table + ' SET in_progress = $1, player_data = $2 WHERE bout_id = $3'
+        const query = 'UPDATE bouts SET in_progress = $1, player_data = $2 WHERE bout_id = $3'
         save(query, updated_bout)
 
         if (dev) status += ' (dev)'
@@ -332,8 +331,8 @@ const handleMentions = (bouts, mentions) => {
         const player_data = { players }
         const in_progress = true
         const query = bout
-          ? 'UPDATE ' + table + ' SET in_progress = $1, player_data = $2, tweet_id = $3 WHERE bout_id = $4'
-          : 'INSERT INTO ' + table + ' (in_progress, player_data, tweet_id, bout_id) values ($1, $2, $3, $4)'
+          ? 'UPDATE bouts SET in_progress = $1, player_data = $2, tweet_id = $3 WHERE bout_id = $4'
+          : 'INSERT INTO bouts (in_progress, player_data, tweet_id, bout_id) values ($1, $2, $3, $4)'
 
         // Create bout array to store
         const new_bout = [
