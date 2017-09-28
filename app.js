@@ -12,7 +12,9 @@ const {
   ACCESS_TOKEN_KEY: access_token_key,
   ACCESS_TOKEN_SECRET: access_token_secret
 } = process.env
-const dev = NODE_ENV !== 'production'
+const local = !NODE_ENV
+const dev = local || NODE_ENV === 'development'
+const table = NODE_ENV === 'production' ? 'bouts' : 'boutsbeta'
 
 // Connect to database
 const client = new pg.Client(DATABASE_URL + '?ssl=true')
@@ -27,7 +29,8 @@ const save = (query, data) => {
 
 // Get bouts from database
 const getBouts = (mentions) => {
-  const bouts_data = client.query('SELECT * FROM bouts;')
+  const query = 'SELECT * FROM ' + table + ';'
+  const bouts_data = client.query(query)
   bouts_data.on('row', function (row, result) {
     result.addRow(row)
   })
@@ -46,8 +49,8 @@ const twitter = new TwitterPackage({
 
 // Post tweets
 const tweet = (status, in_reply_to_status_id) => {
-  if (dev) {
-    console.log('(dev) Replied:', status)
+  if (local) {
+    console.log('(local) Replied:', status)
   } else {
     twitter.post('statuses/update', { status, in_reply_to_status_id }, function (error, reply, response) {
       console.log(error || 'Replied: ' + reply.text)
@@ -101,7 +104,7 @@ const handleMentions = (bouts, mentions) => {
     const date = new Date()
     const age = Math.floor(((date - created_date) / 86400000))
     // If tweet is over 1 week old, stop queueing
-    if (age > 7 && !dev) break
+    if (age > 7 && !local) break
 
     console.log('Mention #' + i, '@' + screen_name + ' tweeted "' + text + '" (' + age + ' days ago)')
 
@@ -303,7 +306,10 @@ const handleMentions = (bouts, mentions) => {
           bout_id
         ]
 
-        save('UPDATE bouts SET in_progress = $1, player_data = $2 WHERE bout_id = $3', updated_bout)
+        const query = 'UPDATE ' + table + ' SET in_progress = $1, player_data = $2 WHERE bout_id = $3'
+        save(query, updated_bout)
+
+        if (dev) status += ' (dev)'
         if (!ignore_strike) tweet(status, id_str)
       } else {
         console.log('This tweet is.. old.')
@@ -326,8 +332,8 @@ const handleMentions = (bouts, mentions) => {
         const player_data = { players }
         const in_progress = true
         const query = bout
-          ? 'UPDATE bouts SET in_progress = $1, player_data = $2, tweet_id = $3 WHERE bout_id = $4'
-          : 'INSERT INTO bouts (in_progress, player_data, tweet_id, bout_id) values ($1, $2, $3, $4)'
+          ? 'UPDATE ' + table + ' SET in_progress = $1, player_data = $2, tweet_id = $3 WHERE bout_id = $4'
+          : 'INSERT INTO ' + table + ' (in_progress, player_data, tweet_id, bout_id) values ($1, $2, $3, $4)'
 
         // Create bout array to store
         const new_bout = [
@@ -345,7 +351,8 @@ const handleMentions = (bouts, mentions) => {
           players[1].screen_name + ' has ' +
           players[1].item + ' (#' +
           items[players[1].item].move + '). Your move, @' +
-          players[0].screen_name + '! (beta)'
+          players[0].screen_name + '!' + 
+          (dev ? ' (dev)' : '')
 
         save(query, new_bout)
         tweet(status, tweet_id)
@@ -363,7 +370,7 @@ const handleMentions = (bouts, mentions) => {
   }, 300)
 }
 
-if (dev) {
+if (local) {
   getBouts(test_mentions)
 } else {
   getMentions()
