@@ -234,9 +234,11 @@ const handleMentions = (bouts, mentions) => {
           } else {
             // If not this player's turn, calc damage
             if (hashtags.length > 0) {
-              const {move, accuracy, minDamage: min, maxDamage: max} = items[item]
+              const attempted_move = hashtags[0].text
+              const move = items[item].find(move => move.id === attempted_move.toLowerCase())
               // Only checks first hashtag
-              if (hashtags[0].text.toLowerCase() === move) {
+              if (move) {
+                const {accuracy, minDamage: min, maxDamage: max} = move
                 if (Math.random() <= accuracy) {
                   const damage = Math.floor(Math.random() * (max - min + 1)) + min
                   next.player_data.players[p].health -= damage
@@ -251,7 +253,7 @@ const handleMentions = (bouts, mentions) => {
                   status += 'Your attack missed. '
                 }
               } else {
-                status += 'Epic fail! You do not have the move "' + hashtags[0].text + '". '
+                status += 'Epic fail! You do not have the move "' + attempted_move + '". '
               }
             } else {
               status += 'No move detected... '
@@ -342,14 +344,19 @@ const handleMentions = (bouts, mentions) => {
           bout_id
         ]
 
+        const getMove = (item) => {
+          const moves = items[item]
+          return moves[Math.floor(Math.random() * moves.length)].id
+        }
+
         // Compose tweet
         const status = '@' +
           players[0].screen_name + ' Game on! You have ' +
           players[0].item + ' (#' +
-          items[players[0].item].move + '). @' +
+          getMove(players[0].item) + '). @' +
           players[1].screen_name + ' has ' +
           players[1].item + ' (#' +
-          items[players[1].item].move + '). Your move, @' +
+          getMove(players[1].item) + '). Your move, @' +
           players[0].screen_name + '!' + 
           (dev ? ' (dev)' : '')
 
