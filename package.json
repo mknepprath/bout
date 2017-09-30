@@ -4,10 +4,17 @@
   "main": "app.js",
   "author": "Michael Knepprath",
   "license": "MIT",
+  "scripts": {
+    "start": "DATABASE_URL=postgres://uuneqniuttwlga:09c9ea960d793cbc7fbb0612937c0e02004a792aab6c484304b8b01dad186ff7@ec2-54-163-234-140.compute-1.amazonaws.com:5432/da52r59q3ke190 ACCESS_TOKEN_KEY=3016652708-RAohqietqPsUMqHaRfgkfdlZIhoBjbbe8oVjIeY ACCESS_TOKEN_SECRET=qaH24DyZZIgq3UIF6DRS16KqQ6mB5j3hXNwiwASpl2o8q CONSUMER_KEY=489lFwIRW4sEcmncpGro8xB7x CONSUMER_SECRET=XoPywWlk2m0qvEV8LrEMLFtjmsFM9r1l0sRmJjqg70UjMqnFgv NODE_ENV=production node app",
+    "start:dev": "DATABASE_URL=postgres://kyescowclpddjp:6c9512f379f0d4b8cb47c16f7d30a2650ff16085ac86caab8f7ea7dab496fbbb@ec2-204-236-236-188.compute-1.amazonaws.com:5432/d41s4ac6mq13ud ACCESS_TOKEN_KEY=2578652522-ryLGPZC6Cy84TySAftw12s4xAjJG0of9Tto48ik ACCESS_TOKEN_SECRET=yL0K63v1dHMlsljat0z2jfv5em6K7i99QgC3sWLJtLInV CONSUMER_KEY=gBE32DFY3YNJJZfm21TjkYqOO CONSUMER_SECRET=9vBbsofTABalH1R1A42iLEQQiiU9a6r6dEuCMT55lE6xoG8QBi NODE_ENV=development node app",
+    "start:local": "node app",
+    "watch": "node clock"
+  },
   "dependencies": {
-    "node-cron": "^1.1.3",
+    "eslint": "^4.8.0",
+    "node-cron": "^1.2.1",
     "pg": "^6.1.5",
-    "twitter": "^1.7.0"
+    "twitter": "^1.7.1"
   },
   "devDependencies": {
     "eslint-config-airbnb-base": "^12.0.1",
