@@ -12,7 +12,8 @@ const {
   ACCESS_TOKEN_KEY: access_token_key,
   ACCESS_TOKEN_SECRET: access_token_secret
 } = process.env
-const dev = NODE_ENV !== 'production'
+const local = !NODE_ENV
+const dev = local || NODE_ENV === 'development'
 
 // Connect to database
 const client = new pg.Client(DATABASE_URL + '?ssl=true')
@@ -27,7 +28,8 @@ const save = (query, data) => {
 
 // Get bouts from database
 const getBouts = (mentions) => {
-  const bouts_data = client.query('SELECT * FROM bouts;')
+  const query = 'SELECT * FROM bouts;'
+  const bouts_data = client.query(query)
   bouts_data.on('row', function (row, result) {
     result.addRow(row)
   })
@@ -46,8 +48,8 @@ const twitter = new TwitterPackage({
 
 // Post tweets
 const tweet = (status, in_reply_to_status_id) => {
-  if (dev) {
-    console.log('(dev) Replied:', status)
+  if (local) {
+    console.log('(local) Replied:', status)
   } else {
     twitter.post('statuses/update', { status, in_reply_to_status_id }, function (error, reply, response) {
       console.log(error || 'Replied: ' + reply.text)
@@ -101,7 +103,7 @@ const handleMentions = (bouts, mentions) => {
     const date = new Date()
     const age = Math.floor(((date - created_date) / 86400000))
     // If tweet is over 1 week old, stop queueing
-    if (age > 7 && !dev) break
+    if (age > 7 && !local) break
 
     console.log('Mention #' + i, '@' + screen_name + ' tweeted "' + text + '" (' + age + ' days ago)')
 
@@ -232,9 +234,11 @@ const handleMentions = (bouts, mentions) => {
           } else {
             // If not this player's turn, calc damage
             if (hashtags.length > 0) {
-              const {move, accuracy, minDamage: min, maxDamage: max} = items[item]
+              const attempted_move = hashtags[0].text
+              const move = items[item].find(move => move.id === attempted_move.toLowerCase())
               // Only checks first hashtag
-              if (hashtags[0].text.toLowerCase() === move) {
+              if (move) {
+                const {accuracy, minDamage: min, maxDamage: max} = move
                 if (Math.random() <= accuracy) {
                   const damage = Math.floor(Math.random() * (max - min + 1)) + min
                   next.player_data.players[p].health -= damage
@@ -249,7 +253,7 @@ const handleMentions = (bouts, mentions) => {
                   status += 'Your attack missed. '
                 }
               } else {
-                status += 'Epic fail! You do not have the move "' + hashtags[0].text + '". '
+                status += 'Epic fail! You do not have the move "' + attempted_move + '". '
               }
             } else {
               status += 'No move detected... '
@@ -303,7 +307,10 @@ const handleMentions = (bouts, mentions) => {
           bout_id
         ]
 
-        save('UPDATE bouts SET in_progress = $1, player_data = $2 WHERE bout_id = $3', updated_bout)
+        const query = 'UPDATE bouts SET in_progress = $1, player_data = $2 WHERE bout_id = $3'
+        save(query, updated_bout)
+
+        if (dev) status += ' (dev)'
         if (!ignore_strike) tweet(status, id_str)
       } else {
         console.log('This tweet is.. old.')
@@ -337,15 +344,21 @@ const handleMentions = (bouts, mentions) => {
           bout_id
         ]
 
+        const getMove = (item) => {
+          const moves = items[item]
+          return moves[Math.floor(Math.random() * moves.length)].id
+        }
+
         // Compose tweet
         const status = '@' +
           players[0].screen_name + ' Game on! You have ' +
           players[0].item + ' (#' +
-          items[players[0].item].move + '). @' +
+          getMove(players[0].item) + '). @' +
           players[1].screen_name + ' has ' +
           players[1].item + ' (#' +
-          items[players[1].item].move + '). Your move, @' +
-          players[0].screen_name + '! (beta)'
+          getMove(players[1].item) + '). Your move, @' +
+          players[0].screen_name + '!' + 
+          (dev ? ' (dev)' : '')
 
         save(query, new_bout)
         tweet(status, tweet_id)
@@ -363,7 +376,7 @@ const handleMentions = (bouts, mentions) => {
   }, 300)
 }
 
-if (dev) {
+if (local) {
   getBouts(test_mentions)
 } else {
   getMentions()
