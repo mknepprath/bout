@@ -1,16 +1,16 @@
-// ASH punch
+// ASH slash
 // MK throw
 
-const test_mentions = [
+const testMentions = [
   { // ASH FIRST ATTACK
     created_at: 'Sun Aug 20 03:55:09 +0000 2017',
     id_str: String(Math.floor(Math.random() * 100000)),
-    text: '@bout_bot @mknepprath #punch',
+    text: '@bout_bot @mknepprath #slash',
     in_reply_to_user_id_str: '3016652708',
     entities: {
       hashtags: [
         {
-          text: 'punch'
+          text: 'slash'
         }
       ],
       user_mentions: [
@@ -87,7 +87,7 @@ const test_mentions = [
   },
   { // VALID BOUT START
     created_at: 'Sat Aug 19 03:55:09 +0000 2017',
-    id_str: '999999',
+    id_str: String(Math.floor(Math.random() * 100000)),
     text: '@bout_bot cHaLlEnGe @ash #throw @ignorethis',
     in_reply_to_user_id_str: '3016652708',
     entities: {
@@ -120,4 +120,4 @@ const test_mentions = [
   }
 ]
 
-module.exports = test_mentions
+module.exports = testMentions
