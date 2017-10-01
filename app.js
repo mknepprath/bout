@@ -72,7 +72,12 @@ const getMentions = () => {
 // Get an item
 const getItem = () => {
   const item_list = Object.keys(items)
-  return item_list[Math.floor(Math.random() * item_list.length)]
+  return random(item_list)
+}
+
+// Return a random item from array
+const random = (n) => {
+  return n[Math.floor(Math.random() * n.length)]
 }
 
 const handleMentions = (bouts, mentions) => {
@@ -244,19 +249,56 @@ const handleMentions = (bouts, mentions) => {
                   next.player_data.players[p].health -= damage
                   const { health } = next.player_data.players[p]
                   if (health <= 0) {
-                    status += 'You win! '
+                    const reply = [
+                      'You win! ',
+                      'You are the victor! ',
+                      'Game over, you win! ',
+                      'That\'s the game, you win! '
+                    ]
+                    status += random(reply)
                     in_progress = false
                   } else {
-                    status += 'Wow! ' + name + ' took ' + damage + ' damage. ' + health + ' health remaining. '
+                    const reply = [
+                      'Wow! ' + name + ' took ' + damage + ' damage. ' + health + ' health remaining. ',
+                      name + ' tried to dodge, but took ' + damage + ' damage. ' + health + ' health remaining. ',
+                      'You successfully hit ' + name + ' for ' + damage + ' points of damage. ' + health + ' health remaining. ',
+                      'Hit! ' + name + ' has ' + health + ' health left after taking ' + damage + ' damage. ',
+                      name + ' did not like that. ' + damage + ' damage, ' + health + ' health remaining. ',
+                      'Down, but not out! ' + name + ' takes ' + damage + ' damage and has ' + health + ' health left. ',
+                      'That did it. ' + name + ' has ' + health + ' health left after taking ' + damage + ' damage. '
+                    ]
+                    status += random(reply)
                   }
                 } else {
-                  status += 'Your attack missed. '
+                  const reply = [
+                    'Your attack missed. ',
+                    'You missed! ',
+                    'You failed to hit your target. ',
+                    'You trip over a rock. ',
+                    'You miss, but barely. ',
+                    'You miss and hit a tree. ',
+                    'It looked good, but you missed. ',
+                    'They dodged the attack! '
+                  ]
+                  status += random(reply)
                 }
               } else {
-                status += 'Epic fail! You do not have the move "' + attempted_move + '". '
+                const reply = [
+                  'Epic fail! You do not have the move "' + attempted_move + '". ',
+                  'You don\'t have the move "' + attempted_move + '". ',
+                  'You can\'t use "' + attempted_move + '" because you don\'t have it. ',
+                  'Nice try, but you don\'t have "' + attempted_move + '". '
+                ]
+                status += random(reply)
               }
             } else {
-              status += 'No move detected... '
+              const reply = [
+                'No move detected... ',
+                'No valid move found in this tweet. ',
+                'What attack will you use? ',
+                'What move will you use? '
+              ]
+              status += random(reply)
               move_success = false
             }
           }
@@ -274,12 +316,36 @@ const handleMentions = (bouts, mentions) => {
           if (!turn) {
             if (in_progress) {
               if (next_turn) {
-                status += 'Your move, @' + screen_name + '!'
+                const reply = [
+                  'Your move, @' + screen_name + '!',
+                  'It\'s your turn, @' + screen_name + '.',
+                  'Make your move, @' + screen_name + '!',
+                  'Wow. Well, now it\'s @' + screen_name + '\'s turn.',
+                  '@' + screen_name + '\'s turn.',
+                  '@' + screen_name + '\'s move!',
+                  'Next up: @' + screen_name + '!'
+                ]
+                status += random(reply)
               } else {
-                status += 'Try again! @' + screen_name + ' is waiting.'
+                const reply = [
+                  'Try again! @' + screen_name + ' is waiting.',
+                  'It\'s your turn, make a move! @' + screen_name + ' appears to be losing their patience.',
+                  'Take your turn, or it will become @' + screen_name + '\'s turn!',
+                  '@' + screen_name + ' wants to go, but you have to make your move first. '
+                ]
+                status += random(reply)
               }
             } else {
-              status += 'Better luck next time, @' + screen_name + '.'
+              const reply = [
+                'Better luck next time, @' + screen_name + '.',
+                'You\'ll get \'em next time, @' + screen_name + '!',
+                'Shoot, I was rooting for @' + screen_name + '!',
+                'It was close, @' + screen_name + '. Next time!',
+                '@' + screen_name + ' was close, though!',
+                'With a little training, you\'ll win next time @' + screen_name + '!',
+                'It was anyone\'s game. I sense a comeback, @' + screen_name + '!'
+              ]
+              status += random(reply)
             }
           } else {
             // Set strikes for current player
@@ -345,8 +411,8 @@ const handleMentions = (bouts, mentions) => {
         ]
 
         const getMove = (item) => {
-          const moves = items[item]
-          return moves[Math.floor(Math.random() * moves.length)].id
+          const move = random(items[item])
+          return move.id
         }
 
         // Compose tweet
