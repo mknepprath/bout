@@ -5,9 +5,26 @@ const pg = require('pg')
 const testMentions = require('./test_mentions')
 const testBouts = require('./test_bouts')
 const items = require('./items')
+const { genReply } = require('./replies')
+const { random } = require('./utils')
+const {
+  TWITTER_IDS: {
+    BOUT_BOT_ID: boutBotId,
+    BOUT_BETA_ID: boutBetaId
+  },
+  REPLY_TYPES:
+  {
+    YOU_WIN,
+    MOVE_SUCCESS,
+    MOVE_FAILED,
+    MOVE_INVALID,
+    NO_MOVE,
+    NEXT_TURN,
+    TRY_AGAIN,
+    YOU_LOSE
+  }
+} = require('./constants')
 
-const boutBotId = '3016652708'
-const boutBetaId = '2578652522'
 const {
   NODE_ENV,
   DATABASE_URL,
@@ -50,7 +67,8 @@ const tweet = (status, inReplyToStatusId) => {
       'statuses/update',
       {
         status,
-        in_reply_to_status_id: inReplyToStatusId
+        in_reply_to_status_id: inReplyToStatusId,
+        auto_populate_reply_metadata: true
       },
       (error, reply) => {
         console.error(error || `Replied: ${reply.text}`)
@@ -58,9 +76,6 @@ const tweet = (status, inReplyToStatusId) => {
     )
   }
 }
-
-// Return a random item from array
-const random = n => n[Math.floor(Math.random() * n.length)]
 
 // Get an item
 const getItem = () => {
@@ -176,7 +191,7 @@ const handleMentions = (bouts, mentions) => {
 
       if (mentionIdStr !== tweetId) {
         // Step 1. Start status
-        let status = `@${player.screen_name} `
+        let status = ''
         let inProgress = true
         let moveSuccess = true
         let ignoreStrike = false
@@ -199,56 +214,23 @@ const handleMentions = (bouts, mentions) => {
                 next.player_data.players[p].health -= damage
                 const { health } = next.player_data.players[p]
                 if (health <= 0) {
-                  const reply = [
-                    'You win! ',
-                    'You are the victor! ',
-                    'Game over, you win! ',
-                    'That\'s the game, you win! '
-                  ]
-                  status += random(reply)
+                  status += genReply(YOU_WIN)
                   inProgress = false
                 } else {
-                  const reply = [
-                    `Wow! ${playerName} took ${damage} damage. ${health} health remaining. `,
-                    `${playerName} tried to dodge, but took ${damage} damage. ${health} health remaining. `,
-                    `You successfully hit ${playerName} for ${damage} points of damage. ${health} health remaining. `,
-                    `Hit! ${playerName} has ${health} health left after taking ${damage} damage. `,
-                    `${playerName} did not like that. ${damage} damage, ${health} health remaining. `,
-                    `Down, but not out! ${playerName} takes ${damage} damage and has ${health} health left. `,
-                    `That did it. ${playerName} has ${health} health left after taking ${damage} damage. `
-                  ]
-                  status += random(reply)
+                  status += genReply(MOVE_SUCCESS, {
+                    playerName,
+                    damage,
+                    health
+                  })
                 }
               } else {
-                const reply = [
-                  'Your attack missed. ',
-                  'You missed! ',
-                  'You failed to hit your target. ',
-                  'You trip over a rock. ',
-                  'You miss, but barely. ',
-                  'You miss and hit a tree. ',
-                  'It looked good, but you missed. ',
-                  'They dodged the attack! '
-                ]
-                status += random(reply)
+                status += genReply(MOVE_FAILED)
               }
             } else {
-              const reply = [
-                `Epic fail! You do not have the move "${attemptedMove}". `,
-                `You don't have the move "${attemptedMove}". `,
-                `You can't use "${attemptedMove}" because you don't have it. `,
-                `Nice try, but you don't have "${attemptedMove}". `
-              ]
-              status += random(reply)
+              status += genReply(MOVE_INVALID, { attemptedMove })
             }
           } else {
-            const reply = [
-              'No move detected... ',
-              'No valid move found in this tweet. ',
-              'What attack will you use? ',
-              'What move will you use? '
-            ]
-            status += random(reply)
+            status += genReply(NO_MOVE)
             moveSuccess = false
           }
         })
@@ -266,36 +248,12 @@ const handleMentions = (bouts, mentions) => {
             const { screen_name: nextPlayerName } = players[p]
             if (inProgress) {
               if (nextTurn) {
-                const reply = [
-                  `Your move, @${nextPlayerName}!`,
-                  `It's your turn, @${nextPlayerName}.`,
-                  `Make your move, @${nextPlayerName}!`,
-                  `Wow. Well, now it's @${nextPlayerName}'s turn.`,
-                  `@${nextPlayerName}'s turn.`,
-                  `@${nextPlayerName}'s move!`,
-                  `Next up: @${nextPlayerName}!`
-                ]
-                status += random(reply)
+                status += genReply(NEXT_TURN, { nextPlayerName })
               } else {
-                const reply = [
-                  `Try again! @${nextPlayerName} is waiting.`,
-                  `It's your turn, make a move! @${nextPlayerName} appears to be losing their patience.`,
-                  `Take your turn, or it will become @${nextPlayerName}'s turn!`,
-                  `@${nextPlayerName} wants to go, but you have to make your move first.`
-                ]
-                status += random(reply)
+                status += genReply(TRY_AGAIN, { nextPlayerName })
               }
             } else {
-              const reply = [
-                `Better luck next time, @${nextPlayerName}.`,
-                `You'll get 'em next time, @${nextPlayerName}!`,
-                `Shoot, I was rooting for @${nextPlayerName}!`,
-                `It was close, @${nextPlayerName}. Next time!`,
-                `@${nextPlayerName} was close, though!`,
-                `With a little training, you'll win next time @${nextPlayerName}!`,
-                `It was anyone's game. I sense a comeback, @${nextPlayerName}!`
-              ]
-              status += random(reply)
+              status += genReply(YOU_LOSE, { nextPlayerName })
             }
           } else if (inProgress) {
             // Set strikes for current player
@@ -367,7 +325,7 @@ const handleMentions = (bouts, mentions) => {
       }
 
       // Compose tweet
-      const status = `@${players[0].screen_name} Game on! You have `
+      const status = 'Game on! You have '
       + `${players[0].item} (#${getMove(players[0].item)}). `
       + `@${players[1].screen_name} has ${players[1].item} `
       + `(#${getMove(players[1].item)}). `
@@ -395,8 +353,8 @@ const getBouts = (mentions) => {
   boutsData.on('row', (row, result) => {
     result.addRow(row)
   })
-  boutsData.on('end', (result) => {
-    handleMentions(result.rows, mentions)
+  boutsData.on('end', ({ rows: bouts }) => {
+    handleMentions(bouts, mentions)
   })
 }
 
