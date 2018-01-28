@@ -130,9 +130,7 @@ const handleMentions = (bouts, mentions) => {
       const {
         in_progress: inProgress,
         tweet_id: tweetId,
-        player_data: {
-          players
-        }
+        player_data: players
       } = bout
       if (inProgress) {
         // Check if this users turn
@@ -181,7 +179,7 @@ const handleMentions = (bouts, mentions) => {
     const boutStart = text.toLowerCase().indexOf('challenge') > -1
 
     if (bout && bout.in_progress) {
-      const { players } = bout.player_data
+      const { player_data: players } = bout
       console.warn(`${players[0].screen_name} (${players[0].item}) vs ${players[1].screen_name} (${players[1].item})`)
 
       const next = Object.assign({}, bout)
@@ -201,7 +199,7 @@ const handleMentions = (bouts, mentions) => {
           const { turn, name: playerName } = players[p]
           // Assign tweet_id to player
           if (turn) {
-            next.player_data.players[p].tweet_id = mentionIdStr
+            next.player_data[p].tweet_id = mentionIdStr
           } else if (hashtags.length > 0) {
             // If not this player's turn, calc damage
             const attemptedMove = hashtags[0].text
@@ -211,8 +209,8 @@ const handleMentions = (bouts, mentions) => {
               const { accuracy, minDamage: min, maxDamage: max } = move
               if (Math.random() <= accuracy) {
                 const damage = Math.floor(Math.random() * ((max - min) + 1)) + min
-                next.player_data.players[p].health -= damage
-                const { health } = next.player_data.players[p]
+                next.player_data[p].health -= damage
+                const { health } = next.player_data[p]
                 if (health <= 0) {
                   status += genReply(YOU_WIN)
                   inProgress = false
@@ -242,7 +240,7 @@ const handleMentions = (bouts, mentions) => {
           const { turn } = players[p]
           if (inProgress && nextTurn) {
             // Switch turn for every player
-            next.player_data.players[p].turn = !turn
+            next.player_data[p].turn = !turn
           }
           if (!turn) {
             const { screen_name: nextPlayerName } = players[p]
@@ -258,17 +256,17 @@ const handleMentions = (bouts, mentions) => {
           } else if (inProgress) {
             // Set strikes for current player
             if (nextTurn) {
-              next.player_data.players[p].strike = 0
+              next.player_data[p].strike = 0
             } else {
-              next.player_data.players[p].strike += 1
+              next.player_data[p].strike += 1
               if (
-                next.player_data.players[p].strike &&
-                next.player_data.players[p].strike < 3) {
+                next.player_data[p].strike &&
+                next.player_data[p].strike < 3) {
                 ignoreStrike = true
               }
             }
           } else {
-            next.player_data = {}
+            next.player_data = []
           }
         })
 
@@ -298,6 +296,14 @@ const handleMentions = (bouts, mentions) => {
         ...userMentions // TODO: Indices gets added here..
       ])
 
+      // Each player gets...
+      // - 1 random item
+      // - 12 health
+      // - 0 strikes
+
+      // First player (p index is 0)
+      // - tweet ID is stored
+      // - turn set
       players.forEach((id, p) => {
         players[p].item = getItem()
         players[p].health = 12
@@ -305,7 +311,6 @@ const handleMentions = (bouts, mentions) => {
         players[p].turn = !p
         players[p].strike = 0
       })
-      const playerData = { players }
       const inProgress = true
       const query = bout
         ? 'UPDATE bouts SET in_progress = $1, player_data = $2, tweet_id = $3 WHERE bout_id = $4'
@@ -314,7 +319,7 @@ const handleMentions = (bouts, mentions) => {
       // Create bout array to store
       const newBout = [
         inProgress,
-        playerData,
+        players,
         mentionIdStr,
         boutId
       ]
