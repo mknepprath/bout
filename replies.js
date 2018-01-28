@@ -33,7 +33,7 @@ const genReply = (
     [MOVE_SUCCESS]: [
       `Wow! ${playerName} took ${damage} damage. ${health} health remaining. `,
       `${playerName} tried to dodge, but took ${damage} damage. ${health} health remaining. `,
-      `You successfully hit ${playerName} for ${damage} points of damage. ${health} health remaining. `,
+      `You successfully hit ${playerName} for ${damage} point${damage !== 1 ? 's' : ''} of damage. ${health} health remaining. `,
       `Hit! ${playerName} has ${health} health left after taking ${damage} damage. `,
       `${playerName} did not like that. ${damage} damage, ${health} health remaining. `,
       `Down, but not out! ${playerName} takes ${damage} damage and has ${health} health left. `,
