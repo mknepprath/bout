@@ -11,6 +11,15 @@ const items = {
       minDamage: 2,
       maxDamage: 2,
       accuracy: 1
+    },
+    {
+      id: 'lullaby',
+      minDamage: 0,
+      maxDamage: 0,
+      accuracy: 1,
+      condition: {
+        sleep: 2
+      }
     }
   ],
   stick: [
@@ -52,7 +61,10 @@ const items = {
       id: 'lunge',
       minDamage: 3,
       maxDamage: 4,
-      accuracy: 0.7
+      accuracy: 0.7,
+      recoil: {
+        sleep: 1
+      }
     }
   ]
 }

@@ -298,6 +298,14 @@ const handleMentions = (bouts, mentions) => {
         ...userMentions // TODO: Indices gets added here..
       ])
 
+      // Each player gets...
+      // - 1 random item
+      // - 12 health
+      // - 0 strikes
+
+      // First player (p index is 0)
+      // - tweet ID is stored
+      // - turn set
       players.forEach((id, p) => {
         players[p].item = getItem()
         players[p].health = 12
