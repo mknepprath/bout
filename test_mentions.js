@@ -7,7 +7,7 @@ const noBoutExistsInit = [
   {
     created_at: 'Sun Aug 20 02:54:09 +0000 2017',
     id_str: String(Math.floor(Math.random() * 100000)),
-    text: '@bout_bot I CHALLENGE @ash #throw KERCHOW',
+    full_text: '@bout_bot I CHALLENGE @ash #throw KERCHOW',
     in_reply_to_user_id_str: '3016652708',
     entities: {
       hashtags: [
@@ -42,7 +42,7 @@ const noBoutExistsIgnore = [
   {
     created_at: 'Sun Aug 20 02:54:09 +0000 2017',
     id_str: String(Math.floor(Math.random() * 100000)),
-    text: '@bout_bot @ash howdy how I do I play this here game #towmater',
+    full_text: '@bout_bot @ash howdy how I do I play this here game #towmater',
     in_reply_to_user_id_str: '3016652708',
     entities: {
       hashtags: [
@@ -78,7 +78,7 @@ const boutInProgress = [
   {
     created_at: 'Sun Aug 20 03:55:09 +0000 2017',
     id_str: String(Math.floor(Math.random() * 100000)),
-    text: '@bout_bot @mknepprath #slash',
+    full_text: '@bout_bot @mknepprath #slash',
     in_reply_to_user_id_str: '3016652708',
     entities: {
       hashtags: [
@@ -107,7 +107,7 @@ const boutInProgress = [
   {
     created_at: 'Sun Aug 20 03:55:09 +0000 2017',
     id_str: '1000001',
-    text: '@bout_bot @mknepprath what?',
+    full_text: '@bout_bot @mknepprath what?',
     in_reply_to_user_id_str: '3016652708',
     entities: {
       hashtags: [],
@@ -132,7 +132,7 @@ const boutInProgress = [
   {
     created_at: 'Sat Aug 19 03:55:10 +0000 2017',
     id_str: String(Math.floor(Math.random() * 100)),
-    text: '@bout_bot @ash #throw',
+    full_text: '@bout_bot @ash #throw',
     in_reply_to_user_id_str: '3016652708',
     entities: {
       hashtags: [
@@ -161,7 +161,7 @@ const boutInProgress = [
   {
     created_at: 'Sat Aug 19 03:55:09 +0000 2017',
     id_str: String(Math.floor(Math.random() * 100000)),
-    text: '@bout_bot cHaLlEnGe @ash #throw @ignorethis',
+    full_text: '@bout_bot cHaLlEnGe @ash #throw @ignorethis',
     in_reply_to_user_id_str: '3016652708',
     entities: {
       hashtags: [
@@ -201,7 +201,7 @@ const boutNotInProgress = [
   {
     created_at: 'Sun Aug 20 02:53:09 +0000 2017',
     id_str: String(Math.floor(Math.random() * 100000)),
-    text: '@bout_bot CHALLENGE @ash #throw heya',
+    full_text: '@bout_bot CHALLENGE @ash #throw heya',
     in_reply_to_user_id_str: '3016652708',
     entities: {
       hashtags: [
@@ -237,7 +237,7 @@ const boutNotInProgressIgnore = [
   {
     created_at: 'Sun Aug 20 02:53:09 +0000 2017',
     id_str: '12345',
-    text: '@bout_bot CHALLENGE @oknepprath #throw heya',
+    full_text: '@bout_bot CHALLENGE @oknepprath #throw heya',
     in_reply_to_user_id_str: '3016652708',
     entities: {
       hashtags: [

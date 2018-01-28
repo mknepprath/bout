@@ -46,9 +46,16 @@ const tweet = (status, inReplyToStatusId) => {
   if (local) {
     console.warn('(local) Replied:', status)
   } else {
-    twitter.post('statuses/update', { status, in_reply_to_status_id: inReplyToStatusId }, (error, reply) => {
-      console.error(error || `Replied: ${reply.text}`)
-    })
+    twitter.post(
+      'statuses/update',
+      {
+        status,
+        in_reply_to_status_id: inReplyToStatusId
+      },
+      (error, reply) => {
+        console.error(error || `Replied: ${reply.text}`)
+      }
+    )
   }
 }
 
@@ -88,7 +95,7 @@ const handleMentions = (bouts, mentions) => {
   const queue = mentions.reduce((result, mention) => {
     const {
       id_str: id,
-      text,
+      full_text: text,
       created_at: createdAt,
       user,
       entities: {
@@ -142,7 +149,7 @@ const handleMentions = (bouts, mentions) => {
     const mention = queue[boutId]
     const {
       id_str: mentionIdStr,
-      text,
+      full_text: text,
       user: {
         screen_name: screenName,
         name,
@@ -395,14 +402,18 @@ const getBouts = (mentions) => {
 
 // Get mentions of @bout_bot
 const getMentions = () => {
-  twitter.get('statuses/mentions_timeline', (error, mentions) => {
-    if (!error) {
-      getBouts(mentions)
-    } else {
-      // Getting mentions from Twitter failed
-      console.error(error)
+  twitter.get(
+    'statuses/mentions_timeline',
+    { tweet_mode: 'extended' },
+    (error, mentions) => {
+      if (!error) {
+        getBouts(mentions)
+      } else {
+        // Getting mentions from Twitter failed
+        console.error(error)
+      }
     }
-  })
+  )
 }
 
 if (local) {
