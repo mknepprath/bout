@@ -283,7 +283,7 @@ const handleMentions = (bouts, mentions) => {
         save(query, updatedBout)
 
         if (dev) status += ' (dev)'
-        if (!ignoreStrike) tweet(status, userIdStr)
+        if (!ignoreStrike) tweet(status, mentionIdStr)
       } else {
         console.warn('This tweet is.. old.')
       }
