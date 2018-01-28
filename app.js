@@ -364,7 +364,7 @@ const handleMentions = (bouts, mentions) => {
       + `${players[0].item} (#${getMove(players[0].item)}). `
       + `@${players[1].screen_name} has ${players[1].item} `
       + `(#${getMove(players[1].item)}). `
-      + `Your move, @${players[0].screen_name}! ${dev ? ' (dev)' : ''}`
+      + `Your move, @${players[0].screen_name}!${dev ? ' (dev)' : ''}`
 
       save(query, newBout)
       tweet(status, mentionIdStr)
