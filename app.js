@@ -83,15 +83,15 @@ const getItem = () => {
   return random(itemList)
 }
 
-// Determines if date passed in is over 1 week old
+// Determines if date passed in is over 1 day old
 // - Used to detect whether a tweet is too old to respond to
-// - Tweets "expire" after one week
+// - Tweets "expire" after one day
 // - TODO: Time could be decreased since reponses should be instantaneous
 const isOldMention = (createdAt) => {
   const createdDate = new Date(createdAt)
   const date = new Date()
-  // If tweet is over 1 week old, return false
-  return Math.floor(((date - createdDate) / 86400000)) > 7
+  // If tweet is over 1 day old, return false
+  return Math.floor(((date - createdDate) / 86400000)) > 1
 }
 
 // Get bout players
@@ -184,10 +184,17 @@ const handleMentions = (bouts, mentions) => {
       const { players } = bout.player_data
       console.warn(`${players[0].screen_name} (${players[0].item}) vs ${players[1].screen_name} (${players[1].item})`)
 
-      const next = Object.assign({}, bout)
+      // Object.assign only does a shallow copy
+      // - Is that okay?
+      let nextPlayerData = Object.assign({}, bout.player_data)
 
       const player = players.find(p => p.turn)
-      const { item, tweet_id: tweetId, strike } = player
+      const {
+        item,
+        tweet_id: tweetId,
+        strike,
+        condition: activeCondition
+      } = player
 
       if (mentionIdStr !== tweetId) {
         // Step 1. Start status
@@ -198,38 +205,76 @@ const handleMentions = (bouts, mentions) => {
 
         // Step 2. Add move result
         players.forEach((id, p) => {
-          const { turn, name: playerName } = players[p]
-          // Assign tweet_id to player
+          const {
+            turn,
+            name: playerName
+          } = players[p]
+
           if (turn) {
-            next.player_data.players[p].tweet_id = mentionIdStr
+            // This player's turn
+            // - Update stored tweet ID
+            nextPlayerData.players[p].tweet_id = mentionIdStr
           } else if (hashtags.length > 0) {
-            // If not this player's turn, calc damage
-            const attemptedMove = hashtags[0].text
-            const move = items[item].find(m => m.id === attemptedMove.toLowerCase())
-            // Only checks first hashtag
-            if (move) {
-              const { accuracy, minDamage: min, maxDamage: max } = move
-              if (Math.random() <= accuracy) {
-                const damage = Math.floor(Math.random() * ((max - min) + 1)) + min
-                next.player_data.players[p].health -= damage
-                const { health } = next.player_data.players[p]
-                if (health <= 0) {
-                  status += genReply(YOU_WIN)
-                  inProgress = false
+            // Not this player's turn, and there are hashtags
+
+            // Conditions should have different names depending on the item,
+            // - but same basic affect.
+            // - Condition in items has a key name, rest of info in constants?
+            // condition: {
+            //   type: 'sleep',
+            //   name: 'knocked out',
+            //   message: 'Ya got knocked out!',
+            //   duration: 3
+            // }
+            if (activeCondition === undefined || activeCondition.sleep <= 0) {
+              // First hashtag is player's move
+              const attemptedMove = hashtags[0].text
+              const move = items[item].find(m => m.id === attemptedMove.toLowerCase())
+
+              if (move) {
+                // Hashtag matches a valid move the player can use
+                const {
+                  accuracy,
+                  minDamage: min,
+                  maxDamage: max,
+                  condition
+                } = move
+
+                if (Math.random() <= accuracy) {
+                  // Move is successful
+                  // - Calculate & apply damage
+                  const damage = Math.floor(Math.random() * ((max - min) + 1)) + min
+                  nextPlayerData.players[p].health -= damage
+                  const { health } = nextPlayerData.players[p]
+
+                  if (health <= 0) {
+                    // Game-winning move
+                    // - Set bout to not in progress
+                    status += genReply(YOU_WIN)
+                    inProgress = false
+                  } else {
+                    // Apply condition & recoil
+                    if (condition) {
+                      nextPlayerData.players[p].condition = condition
+                    }
+                    status += genReply(MOVE_SUCCESS, {
+                      playerName,
+                      damage,
+                      health
+                    })
+                  }
                 } else {
-                  status += genReply(MOVE_SUCCESS, {
-                    playerName,
-                    damage,
-                    health
-                  })
+                  status += genReply(MOVE_FAILED)
                 }
               } else {
-                status += genReply(MOVE_FAILED)
+                status += genReply(MOVE_INVALID, { attemptedMove })
               }
             } else {
-              status += genReply(MOVE_INVALID, { attemptedMove })
+              status += 'slepin. '
+              nextPlayerData.players[p].condition -= 1
             }
           } else {
+            // Not this player's turn, and there are no hashtags
             status += genReply(NO_MOVE)
             moveSuccess = false
           }
@@ -240,9 +285,10 @@ const handleMentions = (bouts, mentions) => {
         // Step 3. Add next player action
         players.forEach((id, p) => {
           const { turn } = players[p]
+
           if (inProgress && nextTurn) {
             // Switch turn for every player
-            next.player_data.players[p].turn = !turn
+            nextPlayerData.players[p].turn = !turn
           }
           if (!turn) {
             const { screen_name: nextPlayerName } = players[p]
@@ -258,24 +304,23 @@ const handleMentions = (bouts, mentions) => {
           } else if (inProgress) {
             // Set strikes for current player
             if (nextTurn) {
-              next.player_data.players[p].strike = 0
+              nextPlayerData.players[p].strike = 0
             } else {
-              next.player_data.players[p].strike += 1
-              if (
-                next.player_data.players[p].strike &&
-                next.player_data.players[p].strike < 3) {
+              nextPlayerData.players[p].strike += 1
+              const { strike: strikes } = nextPlayerData.players[p]
+              if (strikes && strikes < 3) {
                 ignoreStrike = true
               }
             }
           } else {
-            next.player_data = {}
+            nextPlayerData = {}
           }
         })
 
         console.warn('Updating bout', boutId)
         const updatedBout = [
           inProgress,
-          next.player_data,
+          nextPlayerData,
           boutId
         ]
 

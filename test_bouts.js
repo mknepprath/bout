@@ -5,10 +5,13 @@ const boutInProgress = {
   player_data: {
     players: [
       {
-        item: 'rock',
+        item: 'fists',
         name: 'Michael Knepprath',
         turn: true,
         health: 12,
+        condition: {
+          sleep: 1
+        },
         id_str: '123',
         strike: 0,
         tweet_id: '18',
