@@ -138,12 +138,12 @@ const boutInProgress = [
   {
     created_at: 'Sat Aug 19 03:55:10 +0000 2017',
     id_str: String(Math.floor(Math.random() * 100)),
-    full_text: '@bout_bot @ash #throw',
+    full_text: '@bout_bot @ash #uppercut',
     in_reply_to_user_id_str: BOUT_BOT_ID,
     entities: {
       hashtags: [
         {
-          text: 'throw'
+          text: 'uppercut'
         }
       ],
       user_mentions: [

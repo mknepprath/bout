@@ -13,12 +13,12 @@ const items = {
       accuracy: 1
     },
     {
-      id: 'lullaby',
+      id: 'uppercut',
       minDamage: 0,
       maxDamage: 0,
       accuracy: 1,
       condition: {
-        sleep: 2
+        knocked_out: 2
       }
     }
   ],

@@ -10,7 +10,7 @@ const boutInProgress = {
         turn: true,
         health: 12,
         condition: {
-          sleep: 1
+          knocked_out: 2
         },
         id_str: '123',
         strike: 0,

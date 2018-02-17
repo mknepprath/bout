@@ -5,6 +5,7 @@ const pg = require('pg')
 const testMentions = require('./test_mentions')
 const testBouts = require('./test_bouts')
 const items = require('./items')
+const conditions = require('./conditions')
 const { genReply } = require('./replies')
 const { random } = require('./utils')
 const {
@@ -188,6 +189,7 @@ const handleMentions = (bouts, mentions) => {
       // - Is that okay?
       let nextPlayerData = Object.assign({}, bout.player_data)
 
+      // Get the data for the player whose turn it is
       const player = players.find(p => p.turn)
       const {
         item,
@@ -196,6 +198,15 @@ const handleMentions = (bouts, mentions) => {
         condition: activeCondition
       } = player
 
+      const conditionId = activeCondition ? Object.keys(activeCondition)[0] : null
+      const conditionData = conditions[conditionId]
+
+      const {
+        type: conditionType,
+        message: conditionMessage
+      } = conditionData || {}
+
+      // If their latest tweet hasn't already been processed...
       if (mentionIdStr !== tweetId) {
         // Step 1. Start status
         let status = ''
@@ -214,6 +225,15 @@ const handleMentions = (bouts, mentions) => {
             // This player's turn
             // - Update stored tweet ID
             nextPlayerData.players[p].tweet_id = mentionIdStr
+
+            // Update current player conditions
+            const { condition } = nextPlayerData.players[p]
+            if (condition) {
+              condition[conditionId] -= 1
+              if (condition[conditionId] <= 0) {
+                delete nextPlayerData.players[p].condition[conditionId]
+              }
+            }
           } else if (hashtags.length > 0) {
             // Not this player's turn, and there are hashtags
 
@@ -226,7 +246,7 @@ const handleMentions = (bouts, mentions) => {
             //   message: 'Ya got knocked out!',
             //   duration: 3
             // }
-            if (activeCondition === undefined || activeCondition.sleep <= 0) {
+            if (conditionType !== 'sleep') {
               // First hashtag is player's move
               const attemptedMove = hashtags[0].text
               const move = items[item].find(m => m.id === attemptedMove.toLowerCase())
@@ -256,12 +276,20 @@ const handleMentions = (bouts, mentions) => {
                     // Apply condition & recoil
                     if (condition) {
                       nextPlayerData.players[p].condition = condition
+
+                      const {
+                        name: conditionName
+                      } = conditions[Object.keys(condition)[0]]
+                      status += `${conditionName} in effect. `
                     }
-                    status += genReply(MOVE_SUCCESS, {
-                      playerName,
-                      damage,
-                      health
-                    })
+                    if (damage > 0) {
+                      status += genReply(MOVE_SUCCESS, {
+                        playerName,
+                        damage,
+                        health
+                      })
+                    }
+                    status += 'No damage.'
                   }
                 } else {
                   status += genReply(MOVE_FAILED)
@@ -270,8 +298,7 @@ const handleMentions = (bouts, mentions) => {
                 status += genReply(MOVE_INVALID, { attemptedMove })
               }
             } else {
-              status += 'slepin. '
-              nextPlayerData.players[p].condition -= 1
+              status += conditionMessage
             }
           } else {
             // Not this player's turn, and there are no hashtags
