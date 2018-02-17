@@ -21,52 +21,52 @@ const items = {
         knocked_out: 2
       }
     }
-  ],
-  stick: [
-    {
-      id: 'swing',
-      minDamage: 1,
-      maxDamage: 4,
-      accuracy: 0.8
-    },
-    {
-      id: 'swipe',
-      minDamage: 2,
-      maxDamage: 4,
-      accuracy: 0.75
-    }
-  ],
-  rock: [
-    {
-      id: 'throw',
-      minDamage: 1,
-      maxDamage: 5,
-      accuracy: 0.65
-    },
-    {
-      id: 'smash',
-      minDamage: 3,
-      maxDamage: 6,
-      accuracy: 0.5
-    }
-  ],
-  sword: [
-    {
-      id: 'slash',
-      minDamage: 2,
-      maxDamage: 6,
-      accuracy: 0.5
-    },
-    {
-      id: 'lunge',
-      minDamage: 3,
-      maxDamage: 4,
-      accuracy: 0.7,
-      recoil: {
-        sleep: 1
-      }
-    }
-  ]
+  ] // ,
+  // stick: [
+  //   {
+  //     id: 'swing',
+  //     minDamage: 1,
+  //     maxDamage: 4,
+  //     accuracy: 0.8
+  //   },
+  //   {
+  //     id: 'swipe',
+  //     minDamage: 2,
+  //     maxDamage: 4,
+  //     accuracy: 0.75
+  //   }
+  // ],
+  // rock: [
+  //   {
+  //     id: 'throw',
+  //     minDamage: 1,
+  //     maxDamage: 5,
+  //     accuracy: 0.65
+  //   },
+  //   {
+  //     id: 'smash',
+  //     minDamage: 3,
+  //     maxDamage: 6,
+  //     accuracy: 0.5
+  //   }
+  // ],
+  // sword: [
+  //   {
+  //     id: 'slash',
+  //     minDamage: 2,
+  //     maxDamage: 6,
+  //     accuracy: 0.5
+  //   },
+  //   {
+  //     id: 'lunge',
+  //     minDamage: 3,
+  //     maxDamage: 4,
+  //     accuracy: 0.7,
+  //     recoil: {
+  //       sleep: 1
+  //     }
+  //   }
+  // ]
 }
 
 module.exports = items
