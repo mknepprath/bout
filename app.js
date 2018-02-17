@@ -237,15 +237,6 @@ const handleMentions = (bouts, mentions) => {
           } else if (hashtags.length > 0) {
             // Not this player's turn, and there are hashtags
 
-            // Conditions should have different names depending on the item,
-            // - but same basic affect.
-            // - Condition in items has a key name, rest of info in constants?
-            // condition: {
-            //   type: 'sleep',
-            //   name: 'knocked out',
-            //   message: 'Ya got knocked out!',
-            //   duration: 3
-            // }
             if (conditionType !== 'sleep') {
               // First hashtag is player's move
               const attemptedMove = hashtags[0].text
@@ -288,8 +279,9 @@ const handleMentions = (bouts, mentions) => {
                         damage,
                         health
                       })
+                    } else {
+                      status += 'No damage. '
                     }
-                    status += 'No damage.'
                   }
                 } else {
                   status += genReply(MOVE_FAILED)
