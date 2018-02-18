@@ -203,7 +203,8 @@ const handleMentions = (bouts, mentions) => {
 
       const {
         type: conditionType,
-        message: conditionMessage
+        message: conditionMessage,
+        name: conditionName
       } = conditionData || {}
 
       // If their latest tweet hasn't already been processed...
@@ -232,6 +233,7 @@ const handleMentions = (bouts, mentions) => {
               condition[conditionId] -= 1
               if (condition[conditionId] <= 0) {
                 delete nextPlayerData.players[p].condition[conditionId]
+                status += `${conditionName} no longer in effect. `
               }
             }
           } else if (hashtags.length > 0) {
