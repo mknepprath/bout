@@ -1,4 +1,4 @@
-# BOUT_BOT
+# @bout_bot
 
 To update: All of this must get compressed into a ZIP file and upload to the AWS Lambda dashboard.
 
