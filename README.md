@@ -10,7 +10,7 @@ To prepare to run, you must:
 To run:
 
 ```shell
-⃗node testHandler.js
+→ node testHandler.js
 ```
 
 This will invoke the handler that is run by the AWS Lambda service.
