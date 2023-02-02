@@ -3,7 +3,8 @@ const { Pool } = require("pg");
 const items = require("./items");
 const { genReply } = require("./replies");
 const { random } = require("./utils");
-const { TwitterApi } = require("twitter-api-v2");
+
+const { login } = require("masto");
 const {
   TWITTER_IDS: { BOUT_BOT_ID: boutBotId },
   REPLY_TYPES: {
@@ -18,14 +19,7 @@ const {
   },
 } = require("./constants");
 
-const {
-  NODE_ENV,
-  DATABASE_URL,
-  CONSUMER_KEY: consumer_key,
-  CONSUMER_SECRET: consumer_secret,
-  ACCESS_TOKEN_KEY: access_token_key,
-  ACCESS_TOKEN_SECRET: access_token_secret,
-} = process.env;
+const { NODE_ENV, DATABASE_URL } = process.env;
 const local = !NODE_ENV;
 const dev = local || NODE_ENV === "development";
 
@@ -46,29 +40,6 @@ const save = (query, data) => {
   }
 };
 
-const userClient = new TwitterApi({
-  appKey: consumer_key,
-  appSecret: consumer_secret,
-  accessToken: access_token_key,
-  accessSecret: access_token_secret,
-});
-
-// Post tweets
-// - Instead of tweeting, log to console when running locally
-const tweet = async (status, inReplyToStatusId) => {
-  console.log("tweet", status, inReplyToStatusId);
-  if (local) {
-    console.warn("(local) Replied:", status);
-  } else {
-    console.log("Replying...");
-    const createdTweet = await userClient.v1.reply(status, inReplyToStatusId, {
-      requestEventDebugHandler: (eventType, data) =>
-        console.log("Event", eventType, "with data", data),
-    });
-    return createdTweet.full_text;
-  }
-};
-
 // Get an item
 const getItem = () => {
   const itemList = Object.keys(items);
@@ -76,29 +47,33 @@ const getItem = () => {
 };
 
 // Determines if date passed in is over 1 week old
-// - Used to detect whether a tweet is too old to respond to
-// - Tweets "expire" after one week
+// - Used to detect whether a post is too old to respond to
+// - Posts "expire" after one week
 // - TODO: Time could be decreased since reponses should be instantaneous
 const isOldMention = (createdAt) => {
   const createdDate = new Date(createdAt);
   const date = new Date();
-  // If tweet is over 1 week old, return false
+  // If post is over 1 week old, return false
   return Math.floor((date - createdDate) / 86400000) > 7;
 };
 
 // Get bout players
 // - First two players (mentioner & mentionee)
 // - Excludes @bout_bot
-const getBoutPlayers = (users) =>
-  users.filter((u) => u.id_str !== boutBotId).slice(0, 2);
+const getBoutPlayers = (users) => {
+  return users
+    .filter((u) => u.id !== boutBotId && u.id_str !== boutBotId)
+    .slice(0, 2);
+};
 
 // Gen bout ID from player IDs
 // - Bout ID is user IDs sorted numerically
-const getBoutId = (users) =>
-  getBoutPlayers(users)
-    .map((u) => u.id_str)
+const getBoutId = (users) => {
+  return getBoutPlayers(users)
+    .map((u) => u.id)
     .sort()
     .join("-");
+};
 
 // Main game handling function...
 async function handleMentions(bouts, mentions) {
@@ -107,11 +82,9 @@ async function handleMentions(bouts, mentions) {
   // Queue actionable mentions
   const queue = mentions.reduce((result, mention) => {
     const {
-      id_str: id,
-      full_text: text,
-      created_at: createdAt,
-      user,
-      entities: { user_mentions: userMentions },
+      createdAt,
+      account: user,
+      status: { content: text, id, mentions: userMentions },
     } = mention;
     // When not running locally, don't queue mentions over one week old
     if (isOldMention(createdAt) && !local) return result;
@@ -125,14 +98,14 @@ async function handleMentions(bouts, mentions) {
     if (bout) {
       const {
         in_progress: inProgress,
-        tweet_id: tweetId,
+        tweet_id: postId,
         player_data: { players },
       } = bout;
       if (inProgress) {
         // Check if this users turn
         const userUp = players.find((player) => player.turn);
-        if (user.id_str !== userUp.id_str) return result;
-      } else if (id === tweetId) {
+        if (user.id !== userUp.id_str) return result;
+      } else if (id === postId) {
         // Not in progress, mention is from previous bout
         return result;
       }
@@ -157,12 +130,15 @@ async function handleMentions(bouts, mentions) {
     // TODO: delete text, screen_name
     const mention = queue[boutId];
     const {
-      id_str: mentionIdStr,
-      full_text: text,
-      user: { screen_name: screenName, name, id_str: userIdStr },
-      entities: { user_mentions: userMentions, hashtags },
+      account: { acct: screenName, displayName: name, id: userIdStr },
+      status: {
+        content: text,
+        id: mentionIdStr,
+        mentions: userMentions,
+        tags: hashtags,
+      },
     } = mention;
-    console.warn(boutId, `@${screenName} tweeted ${text}`);
+    console.warn(boutId, `@${screenName} posted ${text}`);
 
     const bout = bouts.find((b) => b.bout_id === boutId); // Bout data
     const boutStart = text.toLowerCase().indexOf("challenge") > -1;
@@ -176,9 +152,9 @@ async function handleMentions(bouts, mentions) {
       const next = Object.assign({}, bout);
 
       const player = players.find((p) => p.turn);
-      const { item, tweet_id: tweetId, strike } = player;
+      const { item, tweet_id: postId, strike } = player;
 
-      if (mentionIdStr !== tweetId) {
+      if (mentionIdStr !== postId) {
         // Step 1. Start status
         let status = "";
         let inProgress = true;
@@ -188,12 +164,12 @@ async function handleMentions(bouts, mentions) {
         // Step 2. Add move result
         players.forEach((id, p) => {
           const { turn, name: playerName } = players[p];
-          // Assign tweet_id to player
+          // Assign tweet_id to player (stored as tweet_id in db)
           if (turn) {
             next.player_data.players[p].tweet_id = mentionIdStr;
           } else if (hashtags.length > 0) {
             // If not this player's turn, calc damage
-            const attemptedMove = hashtags[0].text;
+            const attemptedMove = hashtags[0].name;
             const move = items[item].find(
               (m) => m.id === attemptedMove.toLowerCase()
             );
@@ -276,7 +252,7 @@ async function handleMentions(bouts, mentions) {
 
         if (!ignoreStrike) replies.push({ status, mentionIdStr });
       } else {
-        console.warn("This tweet is.. old.");
+        console.warn("This post is.. old.");
       }
     } else if (boutStart) {
       // NEW BOUT //
@@ -286,7 +262,11 @@ async function handleMentions(bouts, mentions) {
       // TODO: limit to 2 for now
       const players = getBoutPlayers([
         { screen_name: screenName, name, id_str: userIdStr },
-        ...userMentions, // TODO: Indices gets added here..
+        ...userMentions.map((m) => ({
+          screen_name: m.acct,
+          name: m.username,
+          id_str: m.id,
+        })), // TODO: Indices gets added here..
       ]);
 
       players.forEach((id, p) => {
@@ -310,7 +290,7 @@ async function handleMentions(bouts, mentions) {
         return move.id;
       };
 
-      // Compose tweet
+      // Compose post
       const status =
         "Game on! You have " +
         `${players[0].item} (#${getMove(players[0].item)}). ` +
@@ -331,27 +311,38 @@ async function handleMentions(bouts, mentions) {
 }
 
 exports.handler = async (event) => {
-  // Get mentions of @bout_bot
-  const { tweets } = await userClient.v1.mentionTimeline();
+  const masto = await login({
+    url: process.env.MASTODON_URL,
+    accessToken: process.env.MASTODON_ACCESS_TOKEN,
+  });
+
+  // Get mentions of @bout
+  const posts = await masto.v1.notifications.list();
 
   // Gets bouts from database
   const bouts = await pool
     .query("SELECT * FROM bouts;")
     .then((response) => response.rows);
 
-  // Go through tweets and update db, returns tweet reply data
-  const replies = await handleMentions(bouts, tweets);
+  // Go through posts and update db, returns post reply data
+  const replies = await handleMentions(
+    bouts,
+    posts.filter((p) => p.type === "mention")
+  );
 
   // Handle replies
-  const createdTweets = await Promise.all(
+  const createdPosts = await Promise.all(
     replies.map((reply) =>
-      userClient.v1.reply(reply.status, reply.mentionIdStr)
+      masto.v1.statuses.create({
+        status: reply.status,
+        inReplyToId: reply.mentionIdStr,
+      })
     )
   );
 
   const response = {
     statusCode: 200,
-    body: JSON.stringify(createdTweets),
+    body: JSON.stringify(createdPosts),
   };
 
   return response;

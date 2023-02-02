@@ -1,6 +1,6 @@
 # BOUT_BOT
 
-To update: All of this must get compressed into a ZIP file and upload to the AWS Lambda dashboard.
+To update: The contents of this directory must get compressed into a ZIP file and uploaded to the AWS Lambda dashboard.
 
 To prepare to run, you must:
 
