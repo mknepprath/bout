@@ -1,6 +1,6 @@
 const TWITTER_IDS = {
   // BOUT_BOT_ID: '3016652708', // Twitter
-  BOUT_BOT_ID: "109790228461724273", // Mastodon
+  BOUT_BOT_ID: "113479454947259743", // Mastodon (@boutbot)
 };
 
 const REPLY_TYPES = {
