@@ -1,5 +1,5 @@
 /* eslint no-console: ["error", { allow: ["warn", "error"] }] */
-const { Pool } = require("pg");
+const { S3Client, GetObjectCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
 const items = require("./items");
 const { genReply } = require("./replies");
 const { random } = require("./utils");
@@ -19,25 +19,65 @@ const {
   },
 } = require("./constants");
 
-const { NODE_ENV, DATABASE_URL } = process.env;
+const { NODE_ENV } = process.env;
 const local = !NODE_ENV;
 const dev = local || NODE_ENV === "development";
 
-// Connect to database
-const pool = new Pool({
-  connectionString: `${DATABASE_URL}`,
-  ssl: {
-    rejectUnauthorized: false,
-  },
-});
+// Bout state lives in one JSON object in S3, not a database.
+//
+// The old Postgres schema was a single table, `bouts (bout_id, in_progress,
+// player_data, tweet_id)`, read in full on every run with `SELECT *` and never
+// joined against anything. That is a key-value store, so it is one object now.
+// Supabase's free tier paused the project after a week idle and the bot died
+// silently; S3 has no idle state to lose.
+const S3_BUCKET = process.env.BOUT_BUCKET || "boutbot";
+const S3_KEY = "bouts.json";
+const s3 = new S3Client({});
 
-// Query database
-const save = (query, data) => {
-  if (!local) {
-    pool.query(query, data, (err) => {
-      if (err) console.error(err);
-    });
+// Loaded once per invocation, mutated by save(), written back once by flush().
+// Batching matters: a read-modify-write per save would race with itself, and the
+// whole point of one object is that a run commits atomically or not at all.
+let bouts = [];
+let dirty = false;
+
+const loadBouts = async () => {
+  if (local) return [];
+  try {
+    const res = await s3.send(
+      new GetObjectCommand({ Bucket: S3_BUCKET, Key: S3_KEY })
+    );
+    bouts = JSON.parse(await res.Body.transformToString()) || [];
+  } catch (err) {
+    // First run has no object yet; anything else is worth knowing about, but an
+    // empty board beats crashing before any reply goes out.
+    if (err.name !== "NoSuchKey") console.error("bout load failed:", err.name);
+    bouts = [];
   }
+  return bouts;
+};
+
+// Upsert by bout_id. Undefined fields are left alone, so a caller that does not
+// know a bout's tweet_id does not blank it.
+const save = (row) => {
+  if (local) return;
+  const i = bouts.findIndex((b) => b.bout_id === row.bout_id);
+  const next = i === -1 ? { bout_id: row.bout_id } : bouts[i];
+  for (const [k, v] of Object.entries(row)) if (v !== undefined) next[k] = v;
+  if (i === -1) bouts.push(next);
+  dirty = true;
+};
+
+const flush = async () => {
+  if (local || !dirty) return;
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: S3_KEY,
+      Body: JSON.stringify(bouts, null, 2),
+      ContentType: "application/json",
+    })
+  );
+  dirty = false;
 };
 
 // Get an item
@@ -242,11 +282,11 @@ async function handleMentions(bouts, mentions) {
         });
 
         console.warn("Updating bout", boutId);
-        const updatedBout = [inProgress, next.player_data, boutId];
-
-        const query =
-          "UPDATE bouts SET in_progress = $1, player_data = $2 WHERE bout_id = $3";
-        save(query, updatedBout);
+        save({
+          bout_id: boutId,
+          in_progress: inProgress,
+          player_data: next.player_data,
+        });
 
         if (dev) status += " (dev)";
 
@@ -278,12 +318,8 @@ async function handleMentions(bouts, mentions) {
       });
       const playerData = { players };
       const inProgress = true;
-      const query = bout
-        ? "UPDATE bouts SET in_progress = $1, player_data = $2, tweet_id = $3 WHERE bout_id = $4"
-        : "INSERT INTO bouts (in_progress, player_data, tweet_id, bout_id) values ($1, $2, $3, $4)";
-
-      // Create bout array to store
-      const newBout = [inProgress, playerData, mentionIdStr, boutId];
+      // Insert and update carried the same four fields in the same order, so the
+      // upsert covers both and the `bout` check is no longer needed here.
 
       const getMove = (item) => {
         const move = random(items[item]);
@@ -298,7 +334,12 @@ async function handleMentions(bouts, mentions) {
         `(#${getMove(players[1].item)}). ` +
         `Your move, @${players[0].screen_name}!${dev ? " (dev)" : ""}`;
 
-      save(query, newBout);
+      save({
+        bout_id: boutId,
+        in_progress: inProgress,
+        player_data: playerData,
+        tweet_id: mentionIdStr,
+      });
       replies.push({ status, mentionIdStr });
     } else {
       console.warn("Not playing Bout (yet). Ignore.");
@@ -319,10 +360,8 @@ exports.handler = async (event) => {
   // Get mentions of @bout
   const posts = await masto.v1.notifications.list();
 
-  // Gets bouts from database
-  const bouts = await pool
-    .query("SELECT * FROM bouts;")
-    .then((response) => response.rows);
+  // Gets bouts from S3
+  const bouts = await loadBouts();
 
   // Go through posts and update db, returns post reply data
   const replies = await handleMentions(
@@ -339,6 +378,9 @@ exports.handler = async (event) => {
       })
     )
   );
+
+  // Write once, after the replies are out. save() only touched memory.
+  await flush();
 
   const response = {
     statusCode: 200,
